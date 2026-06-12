@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import i18n from '../i18n'
+import { globalErrorHandler, type ErrorContext } from '../lib/error-handler'
 
 type Props = {
   children: ReactNode
@@ -7,33 +8,47 @@ type Props = {
 
 type State = {
   error: Error | null
+  errorContext: ErrorContext | null
 }
 
 export class AppErrorBoundary extends Component<Props, State> {
-  state: State = { error: null }
+  state: State = { error: null, errorContext: null }
+  private retryCount = 0
+  private maxRetries = 2
 
   static getDerivedStateFromError(error: Error): State {
-    return { error }
+    const context = globalErrorHandler.captureError(error)
+    return { error, errorContext: context }
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('[AppErrorBoundary] uncaught render error:', error, info.componentStack)
-    if (typeof window !== 'undefined' && typeof window.dsGui?.logError === 'function') {
-      void window.dsGui.logError('renderer', 'Uncaught render error', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        componentStack: info.componentStack
-      }).catch(() => undefined)
-    }
+
+    globalErrorHandler.captureError(error, {
+      componentStack: info.componentStack,
+      retryCount: this.retryCount
+    })
   }
 
   private handleReload = (): void => {
     window.location.reload()
   }
 
+  private handleRetry = (): void => {
+    if (this.retryCount >= this.maxRetries) {
+      this.handleReload()
+      return
+    }
+    
+    this.retryCount++
+    this.setState({ error: null, errorContext: null })
+  }
+
   override render(): ReactNode {
     if (!this.state.error) return this.props.children
+
+    const { errorContext } = this.state
+    const canRetry = errorContext?.retryable && this.retryCount < this.maxRetries
 
     return (
       <div className="flex h-full min-h-0 flex-col items-center justify-center bg-ds-main px-6">
@@ -44,13 +59,29 @@ export class AppErrorBoundary extends Component<Props, State> {
           <p className="mt-2 text-[13px] leading-5 text-amber-800/80 dark:text-amber-100/80">
             {this.state.error.message || String(this.state.error)}
           </p>
-          <button
-            type="button"
-            onClick={this.handleReload}
-            className="mt-4 rounded-full bg-amber-900/10 px-5 py-2 text-[13px] font-medium text-amber-900 transition hover:bg-amber-900/20 dark:bg-amber-100/10 dark:text-amber-100 dark:hover:bg-amber-100/20"
-          >
-            {i18n.t('appErrorReload')}
-          </button>
+          {errorContext?.category && (
+            <p className="mt-1 text-[12px] text-amber-700/70 dark:text-amber-200/70">
+              {i18n.t(`errorCategory${errorContext.category.charAt(0).toUpperCase() + errorContext.category.slice(1)}`)}
+            </p>
+          )}
+          <div className="mt-4 flex gap-3 justify-center">
+            {canRetry && (
+              <button
+                type="button"
+                onClick={this.handleRetry}
+                className="rounded-full bg-amber-900/10 px-5 py-2 text-[13px] font-medium text-amber-900 transition hover:bg-amber-900/20 dark:bg-amber-100/10 dark:text-amber-100 dark:hover:bg-amber-100/20"
+              >
+                {i18n.t('appErrorRetry')} ({this.maxRetries - this.retryCount})
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={this.handleReload}
+              className="rounded-full bg-amber-900/10 px-5 py-2 text-[13px] font-medium text-amber-900 transition hover:bg-amber-900/20 dark:bg-amber-100/10 dark:text-amber-100 dark:hover:bg-amber-100/20"
+            >
+              {i18n.t('appErrorReload')}
+            </button>
+          </div>
         </div>
       </div>
     )

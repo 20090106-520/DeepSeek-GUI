@@ -30,11 +30,16 @@ describe('AppErrorBoundary', () => {
 
     boundary.componentDidCatch(error, { componentStack: '\n    at Child' } as ErrorInfo)
 
-    expect(logError).toHaveBeenCalledWith('renderer', 'Uncaught render error', {
-      name: 'Error',
+    expect(logError).toHaveBeenCalledWith('ErrorBoundary', 'boom', expect.objectContaining({
+      category: 'unknown',
       message: 'boom',
-      stack: error.stack,
-      componentStack: '\n    at Child'
-    })
+      retryable: false,
+      source: 'ErrorBoundary',
+      metadata: {
+        componentStack: '\n    at Child',
+        retryCount: 0,
+      },
+      originalError: error,
+    }))
   })
 })

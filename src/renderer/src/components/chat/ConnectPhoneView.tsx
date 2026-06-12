@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import {
   AtSign,
@@ -196,28 +196,28 @@ export function ConnectPhoneView({
     }
   }
 
-  const cancelInstallAttempt = (): void => {
+  const cancelInstallAttempt = useCallback((): void => {
     installAttemptRef.current += 1
     installRequestInFlightRef.current = false
     clearInstallTimers()
-  }
+  }, [])
 
   useEffect(() => {
     return cancelInstallAttempt
-  }, [])
+  }, [cancelInstallAttempt])
 
   useEffect(() => {
     cancelInstallAttempt()
     setSaving(false)
     setInstallQr(INITIAL_QR_STATE)
-  }, [target])
+  }, [target, cancelInstallAttempt])
 
   useEffect(() => {
     if (!hasExistingChannel) return
     cancelInstallAttempt()
     setSaving(false)
     setInstallQr(INITIAL_QR_STATE)
-  }, [hasExistingChannel])
+  }, [hasExistingChannel, cancelInstallAttempt])
 
   const addConnectedChannel = async (
     poll: Extract<ClawImInstallPollResult, { done: true }>
@@ -641,29 +641,29 @@ export function ConnectPhoneSidebarPanel({
     }
   }
 
-  const cancelInstallAttempt = (): void => {
+  const cancelInstallAttempt = useCallback((): void => {
     installAttemptRef.current += 1
     installRequestInFlightRef.current = false
     clearInstallTimers()
-  }
+  }, [])
 
   useEffect(() => {
     return cancelInstallAttempt
-  }, [])
+  }, [cancelInstallAttempt])
 
   useEffect(() => {
     cancelInstallAttempt()
     setSaving(false)
     setInstallQr(INITIAL_QR_STATE)
     setDisconnectError('')
-  }, [target])
+  }, [target, cancelInstallAttempt])
 
   useEffect(() => {
     if (!hasExistingChannel) return
     cancelInstallAttempt()
     setSaving(false)
     setInstallQr(INITIAL_QR_STATE)
-  }, [hasExistingChannel])
+  }, [hasExistingChannel, cancelInstallAttempt])
 
   const addConnectedChannel = async (
     poll: Extract<ClawImInstallPollResult, { done: true }>

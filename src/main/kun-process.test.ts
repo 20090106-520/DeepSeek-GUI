@@ -346,6 +346,8 @@ describe('syncGuiManagedKunConfig', () => {
         }
       }
     }), 'utf8')
+    const emptyMcpConfigPath = join(tempRoot, 'mcp-empty.json')
+    writeFileSync(emptyMcpConfigPath, '{}', 'utf8')
     const module = await import('./kun-process')
 
     await module.syncGuiManagedKunConfig(tempRoot, {
@@ -394,7 +396,7 @@ describe('syncGuiManagedKunConfig', () => {
           maxArrayItems: 40
         }
       }
-    })
+    }, { mcpConfigPath: emptyMcpConfigPath })
 
     const parsed = JSON.parse(readFileSync(configPath, 'utf8')) as any
     expect(KunConfigSchema.safeParse(parsed).success).toBe(true)

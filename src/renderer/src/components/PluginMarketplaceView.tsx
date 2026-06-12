@@ -410,6 +410,19 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
       )
   },
   {
+    id: 'computer-use',
+    kind: 'mcp',
+    titleKey: 'pluginMcpComputerUseTitle',
+    descriptionKey: 'pluginMcpComputerUseDesc',
+    group: 'recommended',
+    mcpConfig: () =>
+      buildMcpConfig(
+        'computer-use',
+        'npx',
+        ['-y', '@anthropic-ai/computer-use-mcp@latest']
+      )
+  },
+  {
     id: 'code-review',
     kind: 'skill',
     titleKey: 'pluginSkillReviewTitle',
