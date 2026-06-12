@@ -1028,38 +1028,6 @@ export function Workbench(): ReactElement {
     await openSddRequirementDraft(activeDraft, initialContent)
   }
 
-  useEffect(() => {
-    if (activeSddDraft) return
-    const activeCodeWorkspace = activeThreadId
-      ? normalizeWorkspaceRoot(codeThreads.find((thread) => thread.id === activeThreadId)?.workspace ?? '')
-      : ''
-    const targetWorkspace = activeCodeWorkspace || normalizeWorkspaceRoot(workspaceRoot)
-    if (!targetWorkspace || dismissedSddDraftWorkspacesRef.current.has(targetWorkspace)) return
-    if (restoredSddDraftWorkspaceRef.current === targetWorkspace) return
-
-    let cancelled = false
-    restoredSddDraftWorkspaceRef.current = targetWorkspace
-    void restoreRememberedSddDraft({
-      workspaceRoot: targetWorkspace,
-      readWorkspaceFile: window.dsGui.readWorkspaceFile
-    }).then((restored) => {
-      if (cancelled || restored.kind !== 'restored') return
-      if (useSddDraftStore.getState().activeDraft) return
-      useSddDraftStore.getState().setActiveDraft(restored.draft, restored.content, {
-        lastSavedContent: restored.lastSavedContent,
-        saveStatus: restored.saveStatus
-      })
-      dismissedSddDraftWorkspacesRef.current.delete(targetWorkspace)
-      setInput('')
-      setMode('agent')
-      setRoute('chat')
-      setRightPanelMode(null)
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [activeSddDraft, activeThreadId, codeThreads, setRightPanelMode, setRoute, workspaceRoot])
 
   const sendSddAssistantPrompt = async (value: string): Promise<void> => {
     const v = value.trim()
