@@ -149,10 +149,8 @@ type Props = {
    * side-conversation composers (non-goal: no nested `/btw`).
    */
   onBtwCommand?: (seedText?: string) => void
-  /**
-   * Hide the `/btw` slash entry (e.g. inside a side conversation).
-   */
   hideBtwCommand?: boolean
+  onAgnesGeneration?: () => void
 }
 
 type SkillCommand = NonNullable<Props['skillCommands']>[number]
@@ -1387,6 +1385,19 @@ export function FloatingComposer({
             ref={composerMenuPanelRef}
             className="absolute bottom-12 left-1 z-40 w-48 overflow-hidden rounded-[18px] border border-ds-border bg-white py-1.5 text-[13px] text-ds-muted shadow-[0_18px_48px_rgba(15,23,42,0.16)] dark:bg-ds-card"
           >
+            {onAgnesGeneration ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onAgnesGeneration}
+                  className="ds-no-drag flex h-8 w-full items-center gap-2 px-3 text-left transition hover:bg-ds-hover hover:text-ds-ink"
+                >
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-purple-500" strokeWidth={1.9} />
+                  <span className="min-w-0 flex-1 truncate">{t('agnesAITools')}</span>
+                </button>
+                <div className="my-1 h-px bg-ds-border-muted/70" />
+              </>
+            ) : null}
             {attachmentUploadEnabled ? (
               <>
                 <button

@@ -64,6 +64,10 @@ const api = {
     ipcRenderer.invoke('file:rename-workspace-entry', payload),
   deleteWorkspaceEntry: (payload) =>
     ipcRenderer.invoke('file:delete-workspace-entry', payload),
+  uploadWorkspaceFiles: (payload) =>
+    ipcRenderer.invoke('file:upload-workspace', payload),
+  downloadWorkspaceFile: (payload) =>
+    ipcRenderer.invoke('file:download-workspace', payload),
   watchWorkspaceFile: (payload) =>
     ipcRenderer.invoke('file:watch-workspace', payload),
   unwatchWorkspaceFile: (watchId) =>
@@ -162,7 +166,17 @@ const api = {
     ipcRenderer.invoke('log:error', { category, message, detail }),
   getLogPath: () => ipcRenderer.invoke('log:get-path'),
   openLogDir: () => ipcRenderer.invoke('log:open-dir'),
-  getPathForFile: (file: File) => webUtils.getPathForFile(file)
+  getPathForFile: (file: File) => webUtils.getPathForFile(file),
+  exportChatMessages: (payload) =>
+    ipcRenderer.invoke('chat:export', payload),
+  listPlugins: () =>
+    ipcRenderer.invoke('plugin:list'),
+  installPlugin: (payload) =>
+    ipcRenderer.invoke('plugin:install', payload),
+  uninstallPlugin: (payload) =>
+    ipcRenderer.invoke('plugin:uninstall', payload),
+  togglePlugin: (payload) =>
+    ipcRenderer.invoke('plugin:toggle', payload),
 } satisfies DsGuiApi
 
 contextBridge.exposeInMainWorld('dsGui', api)

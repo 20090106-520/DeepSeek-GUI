@@ -89,7 +89,7 @@ export type ReadClassification = {
 
 export const COMPACT_RESOURCE_FILE_NAMES = new Set(['AGENTS.md', 'AGENTS.MD', 'CLAUDE.md', 'CLAUDE.MD'])
 
-export type BuiltinToolName = 'read' | 'bash' | 'edit' | 'write' | 'grep' | 'find' | 'ls'
+export type BuiltinToolName = 'read' | 'bash' | 'edit' | 'write' | 'grep' | 'find' | 'ls' | 'generate_image' | 'generate_video'
 export const allBuiltinToolNames: Set<BuiltinToolName> = new Set([
   'read',
   'bash',
@@ -97,7 +97,9 @@ export const allBuiltinToolNames: Set<BuiltinToolName> = new Set([
   'write',
   'grep',
   'find',
-  'ls'
+  'ls',
+  'generate_image',
+  'generate_video'
 ])
 export type ToolName = BuiltinToolName
 export const allToolNames: Set<ToolName> = allBuiltinToolNames
@@ -139,6 +141,14 @@ export type LsLocalToolOptions = {
   operations?: LsLocalToolOperations
 }
 
+export type ImageLocalToolOptions = {
+  operations?: ImageToolOperations
+}
+
+export type VideoLocalToolOptions = {
+  operations?: VideoToolOperations
+}
+
 export type BuiltinLocalToolsOptions = {
   read?: ReadLocalToolOptions
   bash?: BashLocalToolOptions
@@ -147,8 +157,44 @@ export type BuiltinLocalToolsOptions = {
   grep?: GrepLocalToolOptions
   find?: FindLocalToolOptions
   ls?: LsLocalToolOptions
+  generate_image?: ImageLocalToolOptions
+  generate_video?: VideoLocalToolOptions
 }
 export type ToolsOptions = BuiltinLocalToolsOptions
+
+export interface ImageToolOperations {
+  generateImage?: (
+    options: {
+      prompt: string
+      style?: 'photorealistic' | 'illustration' | 'anime' | '3d' | 'abstract' | 'cartoon'
+      width?: number
+      height?: number
+      quality?: 'standard' | 'high' | 'ultra'
+    }
+  ) => Promise<{
+    success: boolean
+    imageUrl?: string
+    imageBase64?: string
+    error?: string
+  }>
+}
+
+export interface VideoToolOperations {
+  generateVideo?: (
+    options: {
+      prompt: string
+      duration?: number
+      aspectRatio?: '16:9' | '9:16' | '4:3' | '1:1' | '21:9'
+      quality?: 'standard' | 'high' | 'ultra'
+    }
+  ) => Promise<{
+    success: boolean
+    videoUrl?: string
+    videoBase64?: string
+    thumbnailUrl?: string
+    error?: string
+  }>
+}
 
 export interface ReadLocalToolOperations {
   stat?: (path: string) => Promise<FsStats>

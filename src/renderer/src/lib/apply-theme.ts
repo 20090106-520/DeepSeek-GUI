@@ -1,5 +1,13 @@
 export type ThemePreference = 'system' | 'light' | 'dark'
-export type UiFontScale = 'small' | 'medium' | 'large'
+export type UiFontScale = 'extraSmall' | 'small' | 'medium' | 'large' | 'extraLarge'
+
+export const UI_FONT_SCALE_OPTIONS: { value: UiFontScale; label: string }[] = [
+  { value: 'extraSmall', label: 'Extra Small' },
+  { value: 'small', label: 'Small' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'large', label: 'Large' },
+  { value: 'extraLarge', label: 'Extra Large' }
+]
 
 let removeSystemListener: (() => void) | null = null
 
@@ -39,12 +47,33 @@ export function applyTheme(pref: ThemePreference): void {
 export function applyUiFontScale(scale: UiFontScale): void {
   const root = document.documentElement
   const factor =
-    scale === 'small'
-      ? '0.82'
-      : scale === 'large'
-        ? '1'
-        : '0.88'
+    scale === 'extraSmall'
+      ? '0.75'
+      : scale === 'small'
+        ? '0.82'
+        : scale === 'large'
+          ? '1'
+          : scale === 'extraLarge'
+            ? '1.1'
+            : '0.88'
   root.style.setProperty('--ds-ui-scale', factor)
+}
+
+export type AccentColor = 'blue' | 'purple' | 'green' | 'orange' | 'pink' | 'cyan'
+
+export const ACCENT_COLORS: { value: AccentColor; label: string; hex: string }[] = [
+  { value: 'blue', label: 'Blue', hex: '#3b82f6' },
+  { value: 'purple', label: 'Purple', hex: '#8b5cf6' },
+  { value: 'green', label: 'Green', hex: '#22c55e' },
+  { value: 'orange', label: 'Orange', hex: '#f97316' },
+  { value: 'pink', label: 'Pink', hex: '#ec4899' },
+  { value: 'cyan', label: 'Cyan', hex: '#06b6d4' }
+]
+
+export function applyAccentColor(color: AccentColor): void {
+  const root = document.documentElement
+  const accentColor = ACCENT_COLORS.find(c => c.value === color)?.hex || '#3b82f6'
+  root.style.setProperty('--ds-accent', accentColor)
 }
 
 /**

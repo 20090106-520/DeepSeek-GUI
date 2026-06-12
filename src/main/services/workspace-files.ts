@@ -11,7 +11,7 @@ import {
   writeFile
 } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import type {
   WorkspaceClipboardImageSavePayload,
   WorkspaceClipboardImageSaveResult,
@@ -31,7 +31,11 @@ import type {
   WorkspaceFileTarget,
   WorkspaceFileWritePayload,
   WorkspaceFileWriteResult,
-  WorkspaceImageReadResult
+  WorkspaceImageReadResult,
+  WorkspaceFileUploadPayload,
+  WorkspaceFileUploadResult,
+  WorkspaceFileDownloadPayload,
+  WorkspaceFileDownloadResult
 } from '../../shared/workspace-file'
 import {
   canonicalPath,
@@ -385,6 +389,82 @@ export async function resolveWorkspaceFile(
       allowBasenameFallback: false
     })
     return { ok: true, path: targetPath }
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : String(error)
+    }
+  }
+}
+
+export async function uploadWorkspaceFiles(
+  payload: WorkspaceFileUploadPayload
+): Promise<WorkspaceFileUploadResult> {
+  try {
+    const workspacePath = await resolveWorkspaceDirectory({ workspaceRoot: payload.workspaceRoot })
+    const uploadedAt = new Date().toISOString()
+    const results: Array<{
+      name: string
+      path: string
+      size: number
+      uploadedAt: string
+    }> = []
+
+    for (const file of payload.files) {
+      const targetPath = file.targetPath
+        ? await resolveTargetPathWithinWorkspace(file.targetPath, payload.workspaceRoot)
+        : join(workspacePath, file.name)
+
+      await mkdir(dirname(targetPath), { recursive: true })
+      const buffer = Buffer.from(file.dataBase64, 'base64')
+      await writeFile(targetPath, buffer)
+
+      const stats = await stat(targetPath)
+      results.push({
+        name: file.name,
+        path: targetPath,
+        size: stats.size,
+        uploadedAt
+      })
+    }
+
+    return {
+      ok: true,
+      files: results
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : String(error)
+    }
+  }
+}
+
+export async function downloadWorkspaceFile(
+  payload: WorkspaceFileDownloadPayload
+): Promise<WorkspaceFileDownloadResult> {
+  try {
+    const targetPath = await resolveOpenTargetPath(payload.path, payload.workspaceRoot)
+    const fileInfo = await stat(targetPath)
+    if (fileInfo.isDirectory()) {
+      return { ok: false, message: 'Cannot download a directory.' }
+    }
+
+    const targetDirectory = payload.targetDirectory
+      ? expandHomePath(payload.targetDirectory)
+      : dirname(targetPath)
+    await mkdir(targetDirectory, { recursive: true })
+
+    const fileName = basename(targetPath)
+    const downloadPath = join(targetDirectory, fileName)
+    const content = await readFile(targetPath)
+    await writeFile(downloadPath, content)
+
+    return {
+      ok: true,
+      path: downloadPath,
+      downloadedAt: new Date().toISOString()
+    }
   } catch (error) {
     return {
       ok: false,

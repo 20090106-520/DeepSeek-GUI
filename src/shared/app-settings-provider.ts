@@ -18,7 +18,8 @@ import {
   DEEPSEEK_MODEL_IDS,
   GEMINI_MODEL_IDS,
   OPENAI_MODEL_IDS,
-  SAPIENS_MODEL_IDS
+  SAPIENS_MODEL_IDS,
+  AGNES_MODEL_IDS
 } from './default-composer-models'
 
 const DEFAULT_MODEL_PROVIDER_NAME = 'DeepSeek'
@@ -64,6 +65,13 @@ export const PRESET_PROVIDERS: Record<string, {
     baseUrl: 'https://api.siray.ai/v1',
     endpointFormat: 'chat_completions',
     models: [...SAPIENS_MODEL_IDS]
+  },
+  agnes: {
+    id: 'agnes',
+    name: 'Agnes AI',
+    baseUrl: 'https://api.agnes.ai/v1',
+    endpointFormat: 'chat_completions',
+    models: [...AGNES_MODEL_IDS]
   }
 }
 

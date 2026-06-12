@@ -24,6 +24,12 @@ export const KEYBOARD_SHORTCUT_COMMANDS = [
     defaultBindings: ['Ctrl+,']
   },
   {
+    id: 'agnes-generation',
+    labelKey: 'shortcutAgnesGeneration',
+    descriptionKey: 'shortcutAgnesGenerationDesc',
+    defaultBindings: ['Ctrl+Shift+G']
+  },
+  {
     id: 'quit',
     labelKey: 'shortcutQuit',
     descriptionKey: 'shortcutQuitDesc',

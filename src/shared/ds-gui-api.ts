@@ -39,7 +39,11 @@ import type {
   WorkspaceFileWatchPayload,
   WorkspaceFileWatchResult,
   WorkspaceFileWritePayload,
-  WorkspaceFileWriteResult
+  WorkspaceFileWriteResult,
+  WorkspaceFileUploadPayload,
+  WorkspaceFileUploadResult,
+  WorkspaceFileDownloadPayload,
+  WorkspaceFileDownloadResult
 } from './workspace-file'
 import type {
   WriteInlineCompletionDebugEntry,
@@ -87,6 +91,56 @@ export type SkillListItem = {
 export type SkillListResult =
   | { ok: true; skills: SkillListItem[]; validationErrors: Array<{ root: string; message: string }> }
   | { ok: false; message: string }
+
+export type PluginKind = 'mcp' | 'skill'
+export type PluginStatus = 'installed' | 'enabled' | 'disabled' | 'error' | 'not_installed'
+
+export type PluginInfo = {
+  id: string
+  kind: PluginKind
+  name: string
+  description?: string
+  version?: string
+  status: PluginStatus
+  source?: string
+  errorMessage?: string
+  lastUsed?: string
+  installedAt?: string
+}
+
+export type PluginListResult =
+  | { ok: true; plugins: PluginInfo[] }
+  | { ok: false; message: string }
+
+export type PluginInstallPayload = {
+  id: string
+  kind: PluginKind
+  source?: string
+  version?: string
+}
+
+export type PluginInstallResult =
+  | { ok: true; plugin: PluginInfo }
+  | { ok: false; message: string }
+
+export type PluginUninstallPayload = {
+  id: string
+  kind: PluginKind
+}
+
+export type PluginUninstallResult =
+  | { ok: true }
+  | { ok: false; message: string }
+
+export type PluginTogglePayload = {
+  id: string
+  kind: PluginKind
+  enabled: boolean
+}
+
+export type PluginToggleResult =
+  | { ok: true; enabled: boolean }
+  | { ok: false; message: string }
 export type DeepseekConfigFileResult = { path: string; content: string; exists: boolean }
 export type DeepseekConfigSaveResult = { ok: true; path: string }
 export type TurnCompleteNotificationPayload = {
@@ -122,6 +176,28 @@ export type ClawImInstallPollResult =
 export type SseEventPayload = { streamId: string; data: unknown }
 export type SseEndPayload = { streamId: string }
 export type SseErrorPayload = { streamId: string; status?: number; message?: string }
+
+export const CHAT_EXPORT_FORMATS = ['json', 'md', 'html', 'txt'] as const
+export type ChatExportFormat = (typeof CHAT_EXPORT_FORMATS)[number]
+
+export type ChatMessage = {
+  id: string
+  role: 'user' | 'assistant' | 'system' | 'tool'
+  content: string
+  timestamp: string
+  toolName?: string
+}
+
+export type ChatExportPayload = {
+  messages: ChatMessage[]
+  title?: string
+  format: ChatExportFormat
+}
+
+export type ChatExportResult =
+  | { ok: true; path: string; exportedAt: string }
+  | { ok: false; canceled: true }
+  | { ok: false; canceled: false; message: string }
 
 export type DsGuiApi = {
   platform: string
@@ -172,6 +248,8 @@ export type DsGuiApi = {
   deleteWorkspaceEntry: (
     payload: WorkspaceEntryDeletePayload
   ) => Promise<WorkspaceEntryDeleteResult>
+  uploadWorkspaceFiles: (payload: WorkspaceFileUploadPayload) => Promise<WorkspaceFileUploadResult>
+  downloadWorkspaceFile: (payload: WorkspaceFileDownloadPayload) => Promise<WorkspaceFileDownloadResult>
   watchWorkspaceFile: (payload: WorkspaceFileWatchPayload) => Promise<WorkspaceFileWatchResult>
   unwatchWorkspaceFile: (watchId: string) => Promise<boolean>
   onWorkspaceFileChanged: (handler: (payload: WorkspaceFileChangePayload) => void) => () => void
@@ -223,4 +301,9 @@ export type DsGuiApi = {
   getLogPath: () => Promise<string>
   openLogDir: () => Promise<{ ok: boolean; message?: string }>
   getPathForFile: (file: File) => string
+  exportChatMessages: (payload: ChatExportPayload) => Promise<ChatExportResult>
+  listPlugins: () => Promise<PluginListResult>
+  installPlugin: (payload: PluginInstallPayload) => Promise<PluginInstallResult>
+  uninstallPlugin: (payload: PluginUninstallPayload) => Promise<PluginUninstallResult>
+  togglePlugin: (payload: PluginTogglePayload) => Promise<PluginToggleResult>
 }

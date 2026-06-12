@@ -556,6 +556,29 @@ describe('Kun built-in tools', () => {
     expect(disk).toBe('alpha\r\ngamma\r\n')
   })
 
+  it('returns an error when trying to read a directory', async () => {
+    await mkdir(join(workspace, 'test-dir'), { recursive: true })
+    await writeFile(join(workspace, 'test-dir', 'file.txt'), 'content\n', 'utf8')
+
+    const result = await host.execute(
+      {
+        callId: 'call_read_dir',
+        toolName: 'read',
+        arguments: { path: 'test-dir' }
+      },
+      buildContext(workspace)
+    )
+
+    expect(result.item).toMatchObject({
+      kind: 'tool_result',
+      toolName: 'read',
+      isError: true
+    })
+    const output = result.item.output as Record<string, unknown>
+    expect(String(output.error)).toContain('is a directory')
+    expect(String(output.error)).toContain('Use \'list\' tool')
+  })
+
   it('reports pi-style read truncation hints for oversized first lines', async () => {
     const hugeLine = 'x'.repeat(DEFAULT_MAX_BYTES + 1024)
     await writeFile(join(workspace, 'huge.txt'), `${hugeLine}\nsecond line\n`, 'utf8')

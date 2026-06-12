@@ -31,4 +31,20 @@ export const GEMINI_MODEL_IDS = [
 export const DEEPSEEK_MODEL_IDS = ['deepseek-v4-pro', 'deepseek-v4-flash'] as const
 
 /** Default model IDs for Sapiens AI providers */
-export const SAPIENS_MODEL_IDS = ['sapiens-ai/agnes-1.5-pro'] as const
+export const SAPIENS_MODEL_IDS = [
+  'sapiens-ai/agnes-1.5-pro',
+  'sapiens-ai/agnes-image-2.0-flash',
+  'sapiens-ai/agnes-image-2.1-flash',
+  'sapiens-ai/agnes-video-2.0'
+] as const
+
+/** Default model IDs for Agnes AI providers */
+export const AGNES_MODEL_IDS = [
+  'agnes-1.5-pro',
+  'agnes-1.5-flash',
+  'agnes-image-2.0-flash',
+  'agnes-image-2.1-flash',
+  'agnes-image-3.0-flash',
+  'agnes-video-2.0',
+  'agnes-video-2.1'
+] as const

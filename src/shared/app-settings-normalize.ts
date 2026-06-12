@@ -1,5 +1,6 @@
 import {
   DEFAULT_GUI_UPDATE_CHANNEL,
+  DEFAULT_USER_PREFERENCES,
   normalizeGuiUpdateChannel,
   type AppBehaviorConfigV1,
   type AppSettingsV1,
@@ -7,6 +8,7 @@ import {
   type GuiUpdateConfigV1,
   type NotificationConfigV1,
   type ScheduleSettingsPatchV1,
+  type UserPreferenceV1,
   type WriteSettingsPatchV1
 } from './app-settings-types'
 import { normalizeKeyboardShortcuts, type KeyboardShortcutsConfigV1 } from './keyboard-shortcuts'
@@ -47,11 +49,22 @@ export function normalizeAppSettings(settings: AppSettingsV1): AppSettingsV1 {
         ? maybeSettings.theme
         : 'system',
     uiFontScale:
+      maybeSettings.uiFontScale === 'extraSmall' ||
       maybeSettings.uiFontScale === 'small' ||
       maybeSettings.uiFontScale === 'medium' ||
-      maybeSettings.uiFontScale === 'large'
+      maybeSettings.uiFontScale === 'large' ||
+      maybeSettings.uiFontScale === 'extraLarge'
         ? maybeSettings.uiFontScale
         : 'small',
+    accentColor:
+      maybeSettings.accentColor === 'blue' ||
+      maybeSettings.accentColor === 'purple' ||
+      maybeSettings.accentColor === 'green' ||
+      maybeSettings.accentColor === 'orange' ||
+      maybeSettings.accentColor === 'pink' ||
+      maybeSettings.accentColor === 'cyan'
+        ? maybeSettings.accentColor
+        : 'blue',
     modelProvider: normalizeModelProviderSelection(maybeSettings.modelProvider),
     provider: normalizeModelProviderSettings(maybeSettings.provider),
     agents: kunSettingsEnvelope(mergeKunRuntimeSettings(defaultKunRuntimeSettings(), {
@@ -76,7 +89,15 @@ export function normalizeAppSettings(settings: AppSettingsV1): AppSettingsV1 {
         maybeSettings.guiUpdate?.channel ?? DEFAULT_GUI_UPDATE_CHANNEL
       )
     },
-    codePromptPrefix: typeof maybeSettings.codePromptPrefix === 'string' ? maybeSettings.codePromptPrefix : ''
+    codePromptPrefix: typeof maybeSettings.codePromptPrefix === 'string' ? maybeSettings.codePromptPrefix : '',
+    preferences: normalizeUserPreferences(maybeSettings.preferences)
+  }
+}
+
+function normalizeUserPreferences(preferences?: Partial<UserPreferenceV1>): UserPreferenceV1 {
+  return {
+    ...DEFAULT_USER_PREFERENCES,
+    ...preferences
   }
 }
 

@@ -54,9 +54,12 @@ import {
   workspaceFileTargetPayloadSchema,
   workspaceFileWatchPayloadSchema,
   workspaceFileWritePayloadSchema,
+  workspaceFileUploadPayloadSchema,
+  workspaceFileDownloadPayloadSchema,
   writeExportPayloadSchema,
   writeRichClipboardPayloadSchema,
   writeInlineCompletionPayloadSchema,
+  chatExportPayloadSchema,
   workspaceRootSchema
 } from './app-ipc-schemas'
 import type { JsonSettingsStore } from '../settings-store'
@@ -67,6 +70,7 @@ import {
   createWorkspaceDirectory,
   createWorkspaceFile,
   deleteWorkspaceEntry,
+  downloadWorkspaceFile,
   expandHomePath,
   listEditorsResult,
   listWorkspaceDirectory,
@@ -79,6 +83,7 @@ import {
   renameWorkspaceEntry,
   resolveWorkspaceFile,
   saveWorkspaceClipboardImage,
+  uploadWorkspaceFiles,
   writeWorkspaceFile
 } from '../services/workspace-service'
 import {
@@ -87,6 +92,8 @@ import {
   requestWriteInlineCompletion
 } from '../services/write-inline-completion-service'
 import { copyWriteDocumentAsRichText, exportWriteDocument } from '../services/write-export-service'
+import { exportChatMessages } from '../services/chat-export-service'
+import { installPlugin, listPlugins, togglePlugin, uninstallPlugin } from '../services/plugin-manager-service'
 import { listGuiSkills } from '../services/skill-service'
 
 type GuiUpdaterModule = typeof import('../gui-updater')
@@ -707,6 +714,16 @@ export function registerAppIpcHandlers(options: RegisterAppIpcHandlersOptions): 
   ipcMain.handle('file:unwatch-workspace', async (_, watchId: unknown) =>
     disposeWorkspaceFileWatch(parseIpcPayload('file:unwatch-workspace', streamIdSchema, watchId))
   )
+  ipcMain.handle('file:upload-workspace', async (_, payload: unknown) =>
+    uploadWorkspaceFiles(
+      parseIpcPayload('file:upload-workspace', workspaceFileUploadPayloadSchema, payload)
+    )
+  )
+  ipcMain.handle('file:download-workspace', async (_, payload: unknown) =>
+    downloadWorkspaceFile(
+      parseIpcPayload('file:download-workspace', workspaceFileDownloadPayloadSchema, payload)
+    )
+  )
   ipcMain.handle('write:export', async (_, payload: unknown) =>
     exportWriteDocument(
       parseIpcPayload('write:export', writeExportPayloadSchema, payload),
@@ -729,6 +746,24 @@ export function registerAppIpcHandlers(options: RegisterAppIpcHandlersOptions): 
     clearWriteInlineCompletionDebugEntries()
     return true
   })
+  ipcMain.handle('chat:export', async (_, payload: unknown) =>
+    exportChatMessages(
+      parseIpcPayload('chat:export', chatExportPayloadSchema, payload),
+      { parentWindow: getMainWindow() }
+    )
+  )
+  ipcMain.handle('plugin:list', async () =>
+    listPlugins(settingsStore.getSnapshot())
+  )
+  ipcMain.handle('plugin:install', async (_, payload: unknown) =>
+    installPlugin(payload as { id: string; kind: 'mcp' | 'skill'; source?: string; version?: string })
+  )
+  ipcMain.handle('plugin:uninstall', async (_, payload: unknown) =>
+    uninstallPlugin(payload as { id: string; kind: 'mcp' | 'skill' })
+  )
+  ipcMain.handle('plugin:toggle', async (_, payload: unknown) =>
+    togglePlugin(payload as { id: string; kind: 'mcp' | 'skill'; enabled: boolean })
+  )
   ipcMain.handle('desktop:command', async (event, command: unknown) => {
     runDesktopCommand(
       parseIpcPayload('desktop:command', desktopCommandSchema, command),

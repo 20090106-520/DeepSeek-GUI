@@ -15,7 +15,9 @@ export {
   type ApprovalPolicy,
   type SandboxMode
 } from '../../kun/src/contracts/policy.js'
-export type UiFontScale = 'small' | 'medium' | 'large'
+export type UiFontScale = 'extraSmall' | 'small' | 'medium' | 'large' | 'extraLarge'
+
+export type AccentColor = 'blue' | 'purple' | 'green' | 'orange' | 'pink' | 'cyan'
 export type ScheduleRunMode = 'agent' | 'plan'
 export type ScheduleKind = 'manual' | 'interval' | 'daily' | 'at'
 export type ScheduleTaskStatus = 'idle' | 'running' | 'success' | 'error'
@@ -457,11 +459,32 @@ export type ModelProviderSelectionV1 = {
   name: string
 }
 
+export type UserPreferenceV1 = {
+  autoSaveHistory: boolean
+  rememberLastWorkspace: boolean
+  autoFocusInput: boolean
+  showWelcomeTips: boolean
+  compactMode: boolean
+  conversationSortOrder: 'latest' | 'oldest' | 'alphabetical'
+  defaultCompletionMode: 'agent' | 'plan'
+}
+
+export const DEFAULT_USER_PREFERENCES: UserPreferenceV1 = {
+  autoSaveHistory: true,
+  rememberLastWorkspace: true,
+  autoFocusInput: true,
+  showWelcomeTips: true,
+  compactMode: false,
+  conversationSortOrder: 'latest',
+  defaultCompletionMode: 'agent'
+}
+
 export type AppSettingsV1 = {
   version: 1
   locale: 'en' | 'zh'
   theme: 'system' | 'light' | 'dark'
   uiFontScale: UiFontScale
+  accentColor: AccentColor
   modelProvider: ModelProviderSelectionV1
   provider: ModelProviderSettingsV1
   agents: KunSettingsEnvelopeV1
@@ -475,10 +498,13 @@ export type AppSettingsV1 = {
   schedule: ScheduleSettingsV1
   guiUpdate: GuiUpdateConfigV1
   codePromptPrefix: string
+  preferences: UserPreferenceV1
 }
 
+export type UserPreferencesPatchV1 = Partial<UserPreferenceV1>
+
 export type AppSettingsPatch = Partial<
-  Omit<AppSettingsV1, 'provider' | 'agents' | 'log' | 'notifications' | 'appBehavior' | 'keyboardShortcuts' | 'write' | 'claw' | 'schedule' | 'guiUpdate'>
+  Omit<AppSettingsV1, 'provider' | 'agents' | 'log' | 'notifications' | 'appBehavior' | 'keyboardShortcuts' | 'write' | 'claw' | 'schedule' | 'guiUpdate' | 'preferences'>
 > & {
   provider?: ModelProviderSettingsPatchV1
   agents?: KunSettingsEnvelopePatchV1
@@ -490,4 +516,5 @@ export type AppSettingsPatch = Partial<
   claw?: ClawSettingsPatchV1
   schedule?: ScheduleSettingsPatchV1
   guiUpdate?: Partial<GuiUpdateConfigV1>
+  preferences?: UserPreferencesPatchV1
 }

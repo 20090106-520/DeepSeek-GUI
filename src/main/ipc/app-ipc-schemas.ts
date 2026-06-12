@@ -611,6 +611,28 @@ export const workspaceFileWatchPayloadSchema = z
   })
   .strict()
 
+export const workspaceFileUploadPayloadSchema = z
+  .object({
+    workspaceRoot: trimmedString(MAX_PATH_LENGTH),
+    files: z.array(
+      z.object({
+        name: trimmedString(255),
+        dataBase64: z.string(),
+        mimeType: z.string().max(255).optional(),
+        targetPath: optionalTrimmedString(MAX_PATH_LENGTH)
+      }).strict()
+    ).max(50)
+  })
+  .strict()
+
+export const workspaceFileDownloadPayloadSchema = z
+  .object({
+    path: trimmedString(MAX_PATH_LENGTH),
+    workspaceRoot: optionalTrimmedString(MAX_PATH_LENGTH),
+    targetDirectory: optionalTrimmedString(MAX_PATH_LENGTH)
+  })
+  .strict()
+
 export const writeExportPayloadSchema = z
   .object({
     path: trimmedString(MAX_PATH_LENGTH),
@@ -789,3 +811,19 @@ export const sseStartPayloadSchema = z
   .strict()
 
 export const streamIdSchema = trimmedString(MAX_ID_LENGTH)
+
+export const chatExportPayloadSchema = z
+  .object({
+    messages: z.array(
+      z.object({
+        id: trimmedString(MAX_ID_LENGTH),
+        role: z.enum(['user', 'assistant', 'system', 'tool']),
+        content: z.string().max(MAX_CHANNEL_TEXT_LENGTH),
+        timestamp: z.string().max(128),
+        toolName: z.string().trim().max(128).optional()
+      }).strict()
+    ).max(1000),
+    title: z.string().trim().max(200).optional(),
+    format: z.enum(['json', 'md', 'html', 'txt'])
+  })
+  .strict()

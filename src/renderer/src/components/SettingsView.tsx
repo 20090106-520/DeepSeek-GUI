@@ -23,7 +23,7 @@ import type {
   CoreRuntimeToolDiagnosticsJson
 } from '../agent/kun-contract'
 import type { WriteInlineCompletionDebugEntry } from '@shared/write-inline-completion'
-import { applyTheme, applyUiFontScale } from '../lib/apply-theme'
+import { applyTheme, applyUiFontScale, applyAccentColor } from '../lib/apply-theme'
 import { formatWorkspacePickerError } from '../lib/format-workspace-picker-error'
 import {
   joinFsPath,
@@ -123,6 +123,7 @@ export function SettingsView(): ReactElement {
   const permissionsSectionRef = useRef<HTMLDivElement | null>(null)
   const formTheme = form?.theme
   const formUiFontScale = form?.uiFontScale
+  const formAccentColor = form?.accentColor
   const formWorkspaceRoot = form?.workspaceRoot
   const formKun = form ? getKunRuntimeSettings(form) : null
   const formPort = formKun?.port
@@ -169,7 +170,10 @@ export function SettingsView(): ReactElement {
     if (!formTheme || !formUiFontScale) return
     applyTheme(formTheme)
     applyUiFontScale(formUiFontScale)
-  }, [formTheme, formUiFontScale])
+    if (formAccentColor) {
+      applyAccentColor(formAccentColor)
+    }
+  }, [formTheme, formUiFontScale, formAccentColor])
 
   useEffect(() => {
     if (typeof window.dsGui?.getLogPath !== 'function') return

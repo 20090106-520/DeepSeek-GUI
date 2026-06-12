@@ -1,4 +1,12 @@
 import { useState, type ReactElement } from 'react'
+import { FeedbackForm } from './FeedbackForm'
+import { UsageStatsView } from './UsageStatsView'
+import {
+  getPrivacySettings,
+  savePrivacySettings,
+  clearSensitiveData,
+  type PrivacyLevel
+} from '../lib/privacy-manager'
 import type { ApprovalPolicy, AppSettingsV1, SandboxMode } from '@shared/app-settings'
 import {
   DEFAULT_WRITE_INLINE_COMPLETION_BASE_URL,
@@ -27,6 +35,8 @@ export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): R
   const [testingConnection, setTestingConnection] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [connectionMessage, setConnectionMessage] = useState('')
+  const [privacySettings, setPrivacySettings] = useState(getPrivacySettings)
+  const [privacySuccess, setPrivacySuccess] = useState(false)
   
   const {
     t,
@@ -280,10 +290,41 @@ export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): R
                         })
                       }
                     >
+                      <option value="extraSmall">{t('fontScaleExtraSmall')}</option>
                       <option value="small">{t('fontScaleSmall')}</option>
                       <option value="medium">{t('fontScaleMedium')}</option>
                       <option value="large">{t('fontScaleLarge')}</option>
+                      <option value="extraLarge">{t('fontScaleExtraLarge')}</option>
                     </select>
+                  }
+                />
+                <SettingRow
+                  title={t('accentColor')}
+                  description={t('accentColorDesc')}
+                  control={
+                    <div className="flex items-center gap-2">
+                      {(['blue', 'purple', 'green', 'orange', 'pink', 'cyan'] as const).map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => update({ accentColor: color })}
+                          className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${
+                            form.accentColor === color ? 'ring-2 ring-offset-2 ring-ds-ink' : ''
+                          }`}
+                          style={{
+                            backgroundColor: {
+                              blue: '#3b82f6',
+                              purple: '#8b5cf6',
+                              green: '#22c55e',
+                              orange: '#f97316',
+                              pink: '#ec4899',
+                              cyan: '#06b6d4'
+                            }[color]
+                          }}
+                          title={t(`accentColor${color.charAt(0).toUpperCase() + color.slice(1)}`)}
+                        />
+                      ))}
+                    </div>
                   }
                 />
                 <SettingRow
@@ -329,6 +370,96 @@ export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): R
                         </p>
                       ) : null}
                     </div>
+                  }
+                />
+              </SettingsCard>
+
+              <SettingsCard title={t('userPreferences')} className="mt-6">
+                <SettingRow
+                  title={t('autoSaveHistory')}
+                  description={t('autoSaveHistoryDesc')}
+                  control={
+                    <Toggle
+                      checked={form.preferences?.autoSaveHistory ?? true}
+                      onChange={(v) => update({ preferences: { autoSaveHistory: v } })}
+                    />
+                  }
+                />
+                <SettingRow
+                  title={t('rememberLastWorkspace')}
+                  description={t('rememberLastWorkspaceDesc')}
+                  control={
+                    <Toggle
+                      checked={form.preferences?.rememberLastWorkspace ?? true}
+                      onChange={(v) => update({ preferences: { rememberLastWorkspace: v } })}
+                    />
+                  }
+                />
+                <SettingRow
+                  title={t('autoFocusInput')}
+                  description={t('autoFocusInputDesc')}
+                  control={
+                    <Toggle
+                      checked={form.preferences?.autoFocusInput ?? true}
+                      onChange={(v) => update({ preferences: { autoFocusInput: v } })}
+                    />
+                  }
+                />
+                <SettingRow
+                  title={t('showWelcomeTips')}
+                  description={t('showWelcomeTipsDesc')}
+                  control={
+                    <Toggle
+                      checked={form.preferences?.showWelcomeTips ?? true}
+                      onChange={(v) => update({ preferences: { showWelcomeTips: v } })}
+                    />
+                  }
+                />
+                <SettingRow
+                  title={t('compactMode')}
+                  description={t('compactModeDesc')}
+                  control={
+                    <Toggle
+                      checked={form.preferences?.compactMode ?? false}
+                      onChange={(v) => update({ preferences: { compactMode: v } })}
+                    />
+                  }
+                />
+                <SettingRow
+                  title={t('conversationSortOrder')}
+                  description={t('conversationSortOrderDesc')}
+                  control={
+                    <select
+                      className={selectControlClass}
+                      value={form.preferences?.conversationSortOrder ?? 'latest'}
+                      onChange={(e) =>
+                        update({
+                          preferences: { conversationSortOrder: e.target.value as AppSettingsV1['preferences']['conversationSortOrder'] }
+                        })
+                      }
+                    >
+                      <option value="latest">{t('conversationSortLatest')}</option>
+                      <option value="oldest">{t('conversationSortOldest')}</option>
+                      <option value="alphabetical">{t('conversationSortAlphabetical')}</option>
+                    </select>
+                  }
+                />
+                <SettingRow
+                  title={t('defaultCompletionMode')}
+                  description={t('defaultCompletionModeDesc')}
+                  control={
+                    <select
+                      className={selectControlClass}
+                      value={form.preferences?.defaultCompletionMode ?? 'agent'}
+                      onChange={(e) =>
+                        update({
+                          preferences: { defaultCompletionMode: e.target.value as AppSettingsV1['preferences']['defaultCompletionMode'] }
+                        })
+                      }
+                    >
+                      <option value="agent">{t('completionModeAgent')}</option>
+                      <option value="plan">{t('completionModePlan')}</option>
+                    </select>
                   }
                 />
               </SettingsCard>
@@ -492,6 +623,110 @@ export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): R
                     </div>
                   }
                 />
+              </SettingsCard>
+
+              <SettingsCard title={t('feedback')} className="mt-6">
+                <p className="text-sm text-ds-muted mb-4">{t('feedbackDesc')}</p>
+                <FeedbackForm />
+              </SettingsCard>
+
+              <SettingsCard title={t('privacy')} className="mt-6">
+                <p className="text-sm text-ds-muted mb-4">{t('privacyDesc')}</p>
+                <SettingRow
+                  title={t('privacyLevel')}
+                  description={
+                    privacySettings.level === 'standard' ? t('privacyLevelStandardDesc') :
+                    privacySettings.level === 'enhanced' ? t('privacyLevelEnhancedDesc') :
+                    t('privacyLevelMaximumDesc')
+                  }
+                  control={
+                    <select
+                      className={selectControlClass}
+                      value={privacySettings.level}
+                      onChange={(e) => {
+                        const newSettings = savePrivacySettings({ level: e.target.value as PrivacyLevel })
+                        setPrivacySettings(newSettings)
+                      }}
+                    >
+                      <option value="standard">{t('privacyLevelStandard')}</option>
+                      <option value="enhanced">{t('privacyLevelEnhanced')}</option>
+                      <option value="maximum">{t('privacyLevelMaximum')}</option>
+                    </select>
+                  }
+                />
+                <SettingRow
+                  title={t('autoLock')}
+                  description={t('autoLockDesc')}
+                  control={
+                    <Toggle
+                      checked={privacySettings.autoLock}
+                      onChange={(v) => {
+                        const newSettings = savePrivacySettings({ autoLock: v })
+                        setPrivacySettings(newSettings)
+                      }}
+                    />
+                  }
+                />
+                <SettingRow
+                  title={t('clearClipboard')}
+                  description={t('clearClipboardDesc')}
+                  control={
+                    <Toggle
+                      checked={privacySettings.clearClipboard}
+                      onChange={(v) => {
+                        const newSettings = savePrivacySettings({ clearClipboard: v })
+                        setPrivacySettings(newSettings)
+                      }}
+                    />
+                  }
+                />
+                <SettingRow
+                  title={t('hideSensitiveData')}
+                  description={t('hideSensitiveDataDesc')}
+                  control={
+                    <Toggle
+                      checked={privacySettings.hideSensitiveData}
+                      onChange={(v) => {
+                        const newSettings = savePrivacySettings({ hideSensitiveData: v })
+                        setPrivacySettings(newSettings)
+                      }}
+                    />
+                  }
+                />
+                <SettingRow
+                  title={t('anonymousAnalytics')}
+                  description={t('anonymousAnalyticsDesc')}
+                  control={
+                    <Toggle
+                      checked={privacySettings.anonymousAnalytics}
+                      onChange={(v) => {
+                        const newSettings = savePrivacySettings({ anonymousAnalytics: v })
+                        setPrivacySettings(newSettings)
+                      }}
+                    />
+                  }
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(t('clearSensitiveDataConfirm'))) {
+                      clearSensitiveData()
+                      setPrivacySuccess(true)
+                      setTimeout(() => setPrivacySuccess(false), 3000)
+                    }
+                  }}
+                  className="mt-4 rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 dark:border-red-700 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50"
+                >
+                  {t('clearSensitiveData')}
+                </button>
+                {privacySuccess && (
+                  <p className="mt-2 text-sm text-emerald-600">{t('clearSensitiveDataSuccess')}</p>
+                )}
+              </SettingsCard>
+
+              <SettingsCard title={t('usageStats')} className="mt-6">
+                <p className="text-sm text-ds-muted mb-4">{t('usageStatsDesc')}</p>
+                <UsageStatsView />
               </SettingsCard>
             </>
   )

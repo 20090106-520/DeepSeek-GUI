@@ -167,6 +167,42 @@ export type WorkspaceClipboardImageSaveResult =
     }
   | { ok: false; message: string }
 
+export type WorkspaceFileUploadPayload = {
+  workspaceRoot: string
+  files: Array<{
+    name: string
+    dataBase64: string
+    mimeType?: string
+    targetPath?: string
+  }>
+}
+
+export type WorkspaceFileUploadResult =
+  | {
+      ok: true
+      files: Array<{
+        name: string
+        path: string
+        size: number
+        uploadedAt: string
+      }>
+    }
+  | { ok: false; message: string }
+
+export type WorkspaceFileDownloadPayload = {
+  path: string
+  workspaceRoot?: string
+  targetDirectory?: string
+}
+
+export type WorkspaceFileDownloadResult =
+  | {
+      ok: true
+      path: string
+      downloadedAt: string
+    }
+  | { ok: false; message: string }
+
 export type WorkspaceFileChangePayload =
   | {
       ok: true

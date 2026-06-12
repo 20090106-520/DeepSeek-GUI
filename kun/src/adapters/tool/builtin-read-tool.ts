@@ -36,7 +36,10 @@ export function createReadLocalTool(options: ReadLocalToolOptions = {}): LocalTo
       const rawPath = typeof args.path === 'string' ? args.path : ''
       if (!rawPath.trim()) return { output: { error: 'path is required' }, isError: true }
       const { absolutePath, relativePath } = resolveWorkspacePath(rawPath, context)
-      await statOp(absolutePath)
+      const fileStat = await statOp(absolutePath)
+      if (fileStat.isDirectory()) {
+        return { output: { error: `'${relativePath}' is a directory, not a file. Use 'list' tool to view directory contents.`, path: absolutePath }, isError: true }
+      }
       const fileBuffer = await readFileOp(absolutePath)
       const classification = getReadClassification(absolutePath, context.workspace)
       const image = detectImageMimeTypeOp(fileBuffer)

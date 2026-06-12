@@ -100,6 +100,9 @@ const TodoPanel = lazy(() =>
 const ScheduleTasksView = lazy(() =>
   import('./schedule/ScheduleTasksView').then((module) => ({ default: module.ScheduleTasksView }))
 )
+const AgnesGenerationPanel = lazy(() =>
+  import('./AgnesGenerationPanel').then((module) => ({ default: module.AgnesGenerationPanel }))
+)
 
 type PendingSddPlanTarget = {
   planId: string
@@ -354,6 +357,7 @@ export function Workbench(): ReactElement {
   const [attachmentUploadError, setAttachmentUploadError] = useState<string | null>(null)
   const [connectPhoneSidebarOpen, setConnectPhoneSidebarOpen] = useState(false)
   const [runtimeLogPath, setRuntimeLogPath] = useState('')
+  const [agnesGenerationPanelOpen, setAgnesGenerationPanelOpen] = useState(false)
   const writeAssistantOpen = useWriteWorkspaceStore((s) => s.assistantOpen)
   const setWriteAssistantOpen = useWriteWorkspaceStore((s) => s.setAssistantOpen)
   const writeAssistantModel = useWriteWorkspaceStore((s) => s.assistantModel)
@@ -521,6 +525,10 @@ export function Workbench(): ReactElement {
         openSettings()
         return
       }
+      if (commandId === 'agnes-generation') {
+        setAgnesGenerationPanelOpen(true)
+        return
+      }
 
       const desktopCommand = DESKTOP_SHORTCUT_COMMANDS[commandId]
       if (desktopCommand) runDesktopShortcut(desktopCommand)
@@ -535,7 +543,8 @@ export function Workbench(): ReactElement {
     keyboardShortcutBindings,
     mode,
     openSettings,
-    setMode
+    setMode,
+    setAgnesGenerationPanelOpen
   ])
   const showDevPreviewCard =
     route === 'chat' &&
@@ -1870,6 +1879,7 @@ export function Workbench(): ReactElement {
                   }
                   openSideConversationDraft()
                 }}
+                onAgnesGeneration={() => setAgnesGenerationPanelOpen(true)}
               />
             </div>
           </section>
@@ -1881,6 +1891,13 @@ export function Workbench(): ReactElement {
           ) : null}
 
           {renderRightPanel()}
+
+          {/* Agnes AI Generation Panel */}
+          {agnesGenerationPanelOpen && (
+            <Suspense fallback={null}>
+              <AgnesGenerationPanel onClose={() => setAgnesGenerationPanelOpen(false)} />
+            </Suspense>
+          )}
         </div>
 
           </>

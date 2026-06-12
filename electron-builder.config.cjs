@@ -94,8 +94,8 @@ module.exports = {
   publish: [
     {
       provider: 'github',
-      owner: 'KunAgent',
-      repo: 'Kun',
+      owner: '20090106-520',
+      repo: 'DeepSeek-GUI',
       releaseType: 'release'
     }
   ],
