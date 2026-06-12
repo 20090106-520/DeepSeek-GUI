@@ -497,6 +497,7 @@ export function Workbench(): ReactElement {
 
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.defaultPrevented || event.repeat || event.isComposing) return
+      if (agnesGenerationPanelOpen) return
       const target = event.target as HTMLElement | null
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) return
       const commandId = findKeyboardShortcutCommand(
@@ -546,7 +547,8 @@ export function Workbench(): ReactElement {
     mode,
     openSettings,
     setMode,
-    setAgnesGenerationPanelOpen
+    setAgnesGenerationPanelOpen,
+    agnesGenerationPanelOpen
   ])
   const showDevPreviewCard =
     route === 'chat' &&
