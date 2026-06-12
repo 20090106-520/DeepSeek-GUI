@@ -37,6 +37,7 @@ export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): R
   const [connectionMessage, setConnectionMessage] = useState('')
   const [privacySettings, setPrivacySettings] = useState(getPrivacySettings)
   const [privacySuccess, setPrivacySuccess] = useState(false)
+  const [showAgnesApiKey, setShowAgnesApiKey] = useState(false)
   
   const {
     t,
@@ -588,7 +589,12 @@ export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): R
                         <SecretInput
                           value={form.agnesGeneration?.apiKey ?? ''}
                           onChange={(v) => update({ agnesGeneration: { apiKey: v } })}
+                          visible={showAgnesApiKey}
+                          onToggleVisibility={() => setShowAgnesApiKey((v) => !v)}
                           placeholder="sk-..."
+                          autoComplete="off"
+                          showLabel={t('showSecret')}
+                          hideLabel={t('hideSecret')}
                         />
                       }
                     />

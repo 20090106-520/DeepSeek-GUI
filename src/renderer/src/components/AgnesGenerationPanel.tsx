@@ -9,13 +9,14 @@ import {
   Send,
   VideoIcon,
   X,
+  XCircle,
   Eye,
   Pencil,
   FileImage,
   Sparkles,
   Upload
 } from 'lucide-react'
-import { useChatStore } from '../store/chat-store'
+
 
 type GenerationType = 'image' | 'video' | 'edit' | 'understand'
 
@@ -83,13 +84,16 @@ function getHeaderGradient(type: GenerationType): string {
 
 export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): ReactElement {
   const { t } = useTranslation()
-  const addComposerMessage = useChatStore((s) => s.addComposerMessage)
   const [generationType, setGenerationType] = useState<GenerationType>('image')
   const [prompt, setPrompt] = useState('')
   const [selectedModel, setSelectedModel] = useState<AnyModel>('agnes-image-3.0-flash')
   const [generating, setGenerating] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [uploadedImageName, setUploadedImageName] = useState('')
+  const [resultContent, setResultContent] = useState<string | null>(null)
+  const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
+  const [resultVideoUrl, setResultVideoUrl] = useState<string | null>(null)
+  const [resultError, setResultError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleTypeChange = useCallback((type: GenerationType) => {
@@ -117,6 +121,10 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
     if ((generationType === 'edit' || generationType === 'understand') && !uploadedImage) return
 
     setGenerating(true)
+    setResultContent(null)
+    setResultImageUrl(null)
+    setResultVideoUrl(null)
+    setResultError(null)
 
     try {
       const model = selectedModel
@@ -132,18 +140,10 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
         })
 
         if (result.ok) {
-          const imageContent = result.imageBase64
-            ? `![${prompt}](${result.imageUrl || 'data:image/png;base64,' + result.imageBase64})`
-            : `![${prompt}](${result.imageUrl})`
-          addComposerMessage({
-            role: 'assistant',
-            content: `[Agnes AI - ${generationType === 'edit' ? t('agnesImageEdit') : t('agnesImageGeneration')}]\n\n**${t('agnesModel')}**: ${model}\n**${t('agnesPrompt')}**: ${prompt}\n\n${imageContent}`
-          })
+          setResultImageUrl(result.imageUrl || (result.imageBase64 ? `data:image/png;base64,${result.imageBase64}` : null))
+          setResultContent(`${generationType === 'edit' ? t('agnesImageEdit') : t('agnesImageGeneration')} — ${model}`)
         } else {
-          addComposerMessage({
-            role: 'assistant',
-            content: `[Agnes AI] ❌ ${result.message}`
-          })
+          setResultError(result.message)
         }
       } else if (generationType === 'video') {
         const result = await dsGui.agnesGenerateVideo({
@@ -154,38 +154,22 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
         })
 
         if (result.ok) {
-          addComposerMessage({
-            role: 'assistant',
-            content: `[Agnes AI - ${t('agnesVideoGeneration')}]\n\n**${t('agnesModel')}**: ${model}\n**${t('agnesPrompt')}**: ${prompt}\n\n🎬 [${t('agnesVideoLink')}](${result.videoUrl})`
-          })
+          setResultVideoUrl(result.videoUrl)
+          setResultContent(`${t('agnesVideoGeneration')} — ${model}`)
         } else {
-          addComposerMessage({
-            role: 'assistant',
-            content: `[Agnes AI] ❌ ${result.message}`
-          })
+          setResultError(result.message)
         }
       } else {
-        addComposerMessage({
-          role: 'user',
-          content: `[Agnes AI - ${t('agnesMultimodalUnderstand')}]\n\n**${t('agnesModel')}**: ${model}\n**${t('agnesPrompt')}**: ${prompt}\n\n[Processing...]`
-        })
-        setTimeout(() => {
-          addComposerMessage({
-            role: 'assistant',
-            content: `[Agnes AI] ${t('agnesApiNote')}`
-          })
-        }, 1000)
+        setResultContent(`${t('agnesMultimodalUnderstand')} — ${model}`)
+        setResultError(t('agnesApiNote'))
       }
     } catch (e) {
-      addComposerMessage({
-        role: 'assistant',
-        content: `[Agnes AI] ❌ ${e instanceof Error ? e.message : String(e)}`
-      })
+      setResultError(e instanceof Error ? e.message : String(e))
     } finally {
       setGenerating(false)
       setPrompt('')
     }
-  }, [prompt, selectedModel, generationType, addComposerMessage, generating, uploadedImage, t])
+  }, [prompt, selectedModel, generationType, generating, uploadedImage, t])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -357,6 +341,31 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
               {t('agnesPromptHint')}
             </p>
           </div>
+
+          {/* Result Display */}
+          {(resultContent || resultError) && (
+            <div className="rounded-xl border border-ds-border bg-ds-subtle p-4">
+              {resultError ? (
+                <div className="flex items-center gap-2 text-sm text-red-500">
+                  <XCircle className="h-4 w-4 shrink-0" />
+                  <span>{resultError}</span>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-ds-ink">{resultContent}</p>
+                  {resultImageUrl && (
+                    <img src={resultImageUrl} alt={resultContent ?? ''} className="max-h-64 rounded-lg object-contain" />
+                  )}
+                  {resultVideoUrl && (
+                    <a href={resultVideoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-purple-500 hover:underline">
+                      <VideoIcon className="h-4 w-4" />
+                      {t('agnesVideoLink')}
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Scenario suggestions */}
           <div>

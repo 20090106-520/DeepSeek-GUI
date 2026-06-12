@@ -510,7 +510,8 @@ export function FloatingComposer({
   onReviewChanges,
   reviewChangesDisabled = false,
   onBtwCommand,
-  hideBtwCommand = false
+  hideBtwCommand = false,
+  onAgnesGeneration
 }: Props): ReactElement {
   const { t, i18n } = useTranslation('common')
   const route = useChatStore((s) => s.route)

@@ -14,8 +14,11 @@ import {
   normalizeGuiUpdateChannel,
   normalizeKeyboardShortcuts,
   normalizeModelProviderSettings,
+  normalizeModelProviderSelection,
   normalizeScheduleSettings,
   normalizeWriteSettings,
+  normalizeAgnesGenerationSettings,
+  normalizeUserPreferences,
   type AppSettingsPatch,
   type AppSettingsV1
 } from '@shared/app-settings'
@@ -44,7 +47,7 @@ export function hasValidPort(settings: AppSettingsV1): boolean {
 
 export function mergeSettings(current: AppSettingsV1, patch: SettingsPatch): AppSettingsV1 {
   const safeCurrent = coerceRendererSettings(current)
-  const { agents: agentsPatch, provider: providerPatch, ...restPatch } = patch
+  const { agents: agentsPatch, provider: providerPatch, preferences: preferencesPatch, ...restPatch } = patch
   return {
     ...applyKunRuntimePatch(safeCurrent, agentsPatch?.kun),
     ...restPatch,
@@ -73,7 +76,15 @@ export function mergeSettings(current: AppSettingsV1, patch: SettingsPatch): App
     guiUpdate: {
       ...safeCurrent.guiUpdate,
       ...(patch.guiUpdate ?? {})
-    }
+    },
+    agnesGeneration: {
+      ...safeCurrent.agnesGeneration,
+      ...(patch.agnesGeneration ?? {})
+    },
+    preferences: normalizeUserPreferences({
+      ...safeCurrent.preferences,
+      ...(preferencesPatch ?? {})
+    })
   }
 }
 
@@ -92,6 +103,12 @@ export function coerceRendererSettings(settings: AppSettingsV1): AppSettingsV1 {
     locale: raw.locale === 'zh' ? 'zh' : 'en',
     theme,
     uiFontScale,
+    accentColor:
+      raw.accentColor === 'blue' || raw.accentColor === 'purple' || raw.accentColor === 'green' ||
+      raw.accentColor === 'orange' || raw.accentColor === 'pink' || raw.accentColor === 'cyan'
+        ? raw.accentColor
+        : 'blue',
+    modelProvider: normalizeModelProviderSelection(raw.modelProvider),
     provider: normalizeModelProviderSettings(raw.provider),
     agents: kunSettingsEnvelope(mergeKunRuntimeSettings(defaultKunRuntimeSettings(), getKunRuntimeSettings(settings))),
     workspaceRoot: typeof raw.workspaceRoot === 'string' ? raw.workspaceRoot : DEFAULT_WORKSPACE_ROOT,
@@ -110,7 +127,9 @@ export function coerceRendererSettings(settings: AppSettingsV1): AppSettingsV1 {
     guiUpdate: {
       channel: normalizeGuiUpdateChannel(raw.guiUpdate?.channel ?? DEFAULT_GUI_UPDATE_CHANNEL)
     },
-    codePromptPrefix: typeof raw.codePromptPrefix === 'string' ? raw.codePromptPrefix : ''
+    codePromptPrefix: typeof raw.codePromptPrefix === 'string' ? raw.codePromptPrefix : '',
+    agnesGeneration: normalizeAgnesGenerationSettings(raw.agnesGeneration),
+    preferences: normalizeUserPreferences(raw.preferences)
   }
 }
 

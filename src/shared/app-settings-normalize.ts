@@ -97,7 +97,7 @@ export function normalizeAppSettings(settings: AppSettingsV1): AppSettingsV1 {
   }
 }
 
-function normalizeUserPreferences(preferences?: Partial<UserPreferenceV1>): UserPreferenceV1 {
+export function normalizeUserPreferences(preferences?: Partial<UserPreferenceV1>): UserPreferenceV1 {
   return {
     ...DEFAULT_USER_PREFERENCES,
     ...preferences
@@ -115,7 +115,7 @@ export function normalizeAppBehaviorSettings(
   }
 }
 
-function normalizeAgnesGenerationSettings(
+export function normalizeAgnesGenerationSettings(
   settings?: Partial<AgnesGenerationProviderV1>
 ): AgnesGenerationProviderV1 {
   return {
@@ -124,7 +124,7 @@ function normalizeAgnesGenerationSettings(
   }
 }
 
-function normalizeModelProviderSelection(
+export function normalizeModelProviderSelection(
   selection?: Partial<{ id: string; name: string }> | undefined
 ): { id: string; name: string } {
   const id = typeof selection?.id === 'string' && selection.id.trim() ? selection.id.trim() : 'deepseek'
