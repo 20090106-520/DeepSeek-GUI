@@ -218,8 +218,8 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-ds-card shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-ds-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between border-b border-ds-border px-6 py-4">
           <div className="flex items-center gap-3">
