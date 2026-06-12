@@ -61,6 +61,7 @@ function updateFeedUrl(channel: GuiUpdateChannel): string {
   const direct = envUpdateUrl(channel)
   if (direct) return direct
 
+
   const base = process.env.R2_PUBLIC_BASE_URL?.trim() || DEFAULT_R2_PUBLIC_BASE_URL
   const prefix = process.env.R2_RELEASE_PREFIX?.trim() || DEFAULT_R2_RELEASE_PREFIX
   return `${joinUrl(base, prefix, 'channels', channel, 'latest')}/`
@@ -324,6 +325,19 @@ async function resolveUpdateChannel(requested?: GuiUpdateChannel): Promise<GuiUp
   return DEFAULT_GUI_UPDATE_CHANNEL
 }
 
+function resolveGithubOwnerRepoFromPkg(): string | null {
+  const pkg = readPackageJson()
+  if (!pkg) return null
+  const repository = pkg.repository
+  const raw =
+    typeof repository === 'string'
+      ? repository
+      : repository && typeof repository === 'object' && 'url' in repository
+        ? String((repository as { url?: unknown }).url ?? '')
+        : ''
+  return normalizeGithubOwnerRepo(raw)
+}
+
 function configureUpdaterChannel(channel: GuiUpdateChannel): void {
   const normalized = normalizeGuiUpdateChannel(channel)
   const feedUrl = updateFeedUrl(normalized)
@@ -331,7 +345,17 @@ function configureUpdaterChannel(channel: GuiUpdateChannel): void {
   configuredChannel = normalized
   configuredFeedUrl = feedUrl
   autoUpdater.allowPrerelease = normalized === 'frontier'
-  autoUpdater.setFeedURL({ provider: 'generic', url: feedUrl })
+  const githubRepo = resolveGithubOwnerRepoFromPkg()
+  if (githubRepo && !envUpdateUrl(normalized)) {
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: githubRepo.split('/')[0],
+      repo: githubRepo.split('/')[1],
+      ...(normalized === 'frontier' ? { releaseType: 'prerelease' } : {})
+    })
+  } else {
+    autoUpdater.setFeedURL({ provider: 'generic', url: feedUrl })
+  }
   if (!changed) return
   downloaded = false
   downloadPromise = null
