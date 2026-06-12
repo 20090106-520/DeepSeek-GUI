@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import type { ApprovalPolicy, AppSettingsV1, SandboxMode } from '@shared/app-settings'
 import {
   DEFAULT_WRITE_INLINE_COMPLETION_BASE_URL,
@@ -7,11 +7,12 @@ import {
   DEFAULT_WRITE_INLINE_LONG_COMPLETION_MAX_TOKENS,
   DEFAULT_KUN_DATA_DIR,
   WRITE_INLINE_COMPLETION_MODEL_IDS,
-  isKunRuntimeInsecure
+  isKunRuntimeInsecure,
+  PRESET_PROVIDERS
 } from '@shared/app-settings'
 import type { GuiUpdateChannel } from '@shared/gui-update'
 import type { SkillRootId } from '../lib/skill-root-preference'
-import { FolderOpen, Loader2, PencilLine, RefreshCw, Settings } from 'lucide-react'
+import { CheckCircle, FolderOpen, Loader2, PencilLine, RefreshCw, Settings, XCircle } from 'lucide-react'
 import { GuiUpdateControl } from './settings-gui-update'
 import {
   InlineNoticeView,
@@ -23,6 +24,10 @@ import {
 } from './settings-controls'
 
 export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): ReactElement {
+  const [testingConnection, setTestingConnection] = useState(false)
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [connectionMessage, setConnectionMessage] = useState('')
+  
   const {
     t,
     tCommon,
@@ -94,6 +99,36 @@ export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): R
     splitSettingsList,
     listSettingsText
   } = ctx
+  
+  const handleTestConnection = async () => {
+    if (!sharedApiKey.trim()) {
+      setConnectionStatus('error')
+      setConnectionMessage(t('connectionFailed').replace('{{error}}', 'API Key cannot be empty'))
+      return
+    }
+    
+    setTestingConnection(true)
+    setConnectionStatus('idle')
+    setConnectionMessage('')
+    
+    try {
+      const response = await window.dsGui.fetchUpstreamModels()
+      
+      if (response.ok) {
+        setConnectionStatus('success')
+        const modelCount = response.modelIds?.length || 0
+        setConnectionMessage(t('connectionSuccess').replace('{{count}}', String(modelCount)))
+      } else {
+        setConnectionStatus('error')
+        setConnectionMessage(t('connectionFailed').replace('{{error}}', response.message || 'Unknown error'))
+      }
+    } catch (error) {
+      setConnectionStatus('error')
+      setConnectionMessage(t('connectionFailed').replace('{{error}}', error instanceof Error ? error.message : String(error)))
+    } finally {
+      setTestingConnection(false)
+    }
+  }
   const platform = typeof window !== 'undefined' ? window.dsGui?.platform ?? '' : ''
   const openAtLoginSupported = platform === 'win32' || platform === 'darwin'
   const startMinimizedSupported = platform === 'win32'
@@ -106,18 +141,76 @@ export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): R
                   title={t('apiKey')}
                   description={t('apiKeySharedDesc')}
                   control={
-                    <SecretInput
-                      value={sharedApiKey}
-                      onChange={(value) => updateSharedCredential({ apiKey: value })}
-                      visible={showApiKey}
-                      onToggleVisibility={() => setShowApiKey((value: boolean) => !value)}
-                      placeholder="sk-..."
-                      autoComplete="off"
-                      invalid={!activeApiKey.trim()}
-                      showLabel={t('showSecret')}
-                      hideLabel={t('hideSecret')}
-                      className="md:max-w-md"
-                    />
+                    <div className="flex flex-col gap-2 md:max-w-md">
+                      <SecretInput
+                        value={sharedApiKey}
+                        onChange={(value) => updateSharedCredential({ apiKey: value })}
+                        visible={showApiKey}
+                        onToggleVisibility={() => setShowApiKey((value: boolean) => !value)}
+                        placeholder="sk-..."
+                        autoComplete="off"
+                        invalid={!activeApiKey.trim()}
+                        showLabel={t('showSecret')}
+                        hideLabel={t('hideSecret')}
+                        className="w-full"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleTestConnection}
+                        disabled={testingConnection || !sharedApiKey.trim()}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-ds-border bg-ds-card px-4 py-2 text-[14px] font-medium text-ds-ink shadow-sm transition hover:bg-ds-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {testingConnection ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            {t('testingConnection')}
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="h-4 w-4" />
+                            {t('testConnection')}
+                          </>
+                        )}
+                      </button>
+                      {connectionStatus !== 'idle' && connectionMessage && (
+                        <div className={`flex items-center gap-2 text-[13px] ${connectionStatus === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                          {connectionStatus === 'success' ? (
+                            <CheckCircle className="h-4 w-4" />
+                          ) : (
+                            <XCircle className="h-4 w-4" />
+                          )}
+                          {connectionMessage}
+                        </div>
+                      )}
+                    </div>
+                  }
+                />
+                <SettingRow
+                  title={t('modelProvider')}
+                  description={t('modelProviderDesc')}
+                  control={
+                    <select
+                      className={selectControlClass}
+                      value={form.modelProvider?.id || 'deepseek'}
+                      onChange={(e) => {
+                        const providerId = e.target.value
+                        const provider = PRESET_PROVIDERS[providerId]
+                        if (provider) {
+                          updateSharedCredential({
+                            baseUrl: provider.baseUrl,
+                            endpointFormat: provider.endpointFormat
+                          })
+                          update({ modelProvider: { id: providerId, name: provider.name } })
+                        }
+                      }}
+                    >
+                      <option value="deepseek">{PRESET_PROVIDERS.deepseek.name}</option>
+                      <option value="openai">{PRESET_PROVIDERS.openai.name}</option>
+                      <option value="anthropic">{PRESET_PROVIDERS.anthropic.name}</option>
+                      <option value="gemini">{PRESET_PROVIDERS.gemini.name}</option>
+                      <option value="sapiens">{PRESET_PROVIDERS.sapiens.name}</option>
+                      <option value="custom">{t('customProvider')}</option>
+                    </select>
                   }
                 />
                 <SettingRow

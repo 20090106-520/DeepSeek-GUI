@@ -52,6 +52,7 @@ export function normalizeAppSettings(settings: AppSettingsV1): AppSettingsV1 {
       maybeSettings.uiFontScale === 'large'
         ? maybeSettings.uiFontScale
         : 'small',
+    modelProvider: normalizeModelProviderSelection(maybeSettings.modelProvider),
     provider: normalizeModelProviderSettings(maybeSettings.provider),
     agents: kunSettingsEnvelope(mergeKunRuntimeSettings(defaultKunRuntimeSettings(), {
       ...runtime,
@@ -87,6 +88,23 @@ export function normalizeAppBehaviorSettings(
     openAtLogin,
     startMinimized: openAtLogin && settings?.startMinimized === true,
     closeToTray: settings?.closeToTray === true
+  }
+}
+
+function normalizeModelProviderSelection(
+  selection?: Partial<{ id: string; name: string }> | undefined
+): { id: string; name: string } {
+  const id = typeof selection?.id === 'string' && selection.id.trim() ? selection.id.trim() : 'deepseek'
+  const names: Record<string, string> = {
+    deepseek: 'DeepSeek',
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+    gemini: 'Google Gemini',
+    custom: 'Custom'
+  }
+  return {
+    id,
+    name: typeof selection?.name === 'string' && selection.name.trim() ? selection.name.trim() : (names[id] || 'Custom')
   }
 }
 

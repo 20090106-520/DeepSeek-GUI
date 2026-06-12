@@ -43,14 +43,7 @@ const hasNotaryToolCredentials = Boolean(
     (process.env.APPLE_API_KEY || process.env.APPLE_API_KEY_BASE64)
 )
 
-const r2PublicBaseUrl = (process.env.R2_PUBLIC_BASE_URL || 'https://deepseek-gui.com/api/r2')
-  .trim()
-  .replace(/\/+$/, '')
-const r2ReleasePrefix = (process.env.R2_RELEASE_PREFIX || 'deepseek-gui')
-  .trim()
-  .replace(/^\/+|\/+$/g, '')
 const updateChannel = normalizeUpdateChannel(process.env.DEEPSEEK_GUI_UPDATE_CHANNEL || 'stable')
-const genericUpdateUrl = `${r2PublicBaseUrl}/${r2ReleasePrefix}/channels/${updateChannel}/latest/`
 const releaseAppVersion = (process.env.DEEPSEEK_GUI_APP_VERSION || '').trim()
 const artifactVersion = releaseAppVersion || '${version}'
 
@@ -100,8 +93,10 @@ module.exports = {
   artifactName: `DeepSeek-GUI-${artifactVersion}-\${os}-\${arch}.\${ext}`,
   publish: [
     {
-      provider: 'generic',
-      url: genericUpdateUrl
+      provider: 'github',
+      owner: 'KunAgent',
+      repo: 'Kun',
+      releaseType: 'release'
     }
   ],
   afterPack: './scripts/after-pack.cjs',

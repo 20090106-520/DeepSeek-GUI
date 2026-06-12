@@ -302,6 +302,9 @@ export class DeepseekCompatModelClient implements ModelClient {
     if (endpointFormat === 'messages') {
       return this.buildAnthropicMessagesRequestBody(request, model, messages, stream)
     }
+    if (endpointFormat === 'gemini') {
+      return this.buildGeminiRequestBody(request, model, messages, stream)
+    }
     const body: Record<string, unknown> = {
       model,
       stream,
@@ -414,6 +417,44 @@ export class DeepseekCompatModelClient implements ModelClient {
         name: tool.name,
         description: tool.description,
         input_schema: tool.inputSchema
+      }))
+    }
+    return body
+  }
+
+  private buildGeminiRequestBody(
+    request: ModelRequest,
+    model: string,
+    messages: ChatMessage[],
+    stream: boolean
+  ): Record<string, unknown> {
+    const converted = messagesToGemini(messages)
+    const body: Record<string, unknown> = {
+      contents: converted.contents
+    }
+    if (converted.system) {
+      body.systemInstruction = { role: 'system', parts: [{ text: converted.system }] }
+    }
+    if (request.maxTokens !== undefined) {
+      body.maxOutputTokens = request.maxTokens
+    }
+    if (request.temperature !== undefined) {
+      body.temperature = request.temperature
+    }
+    if (request.topP !== undefined) {
+      body.topP = request.topP
+    }
+    if (stream) {
+      body.stream = true
+    }
+    const tools = normalizeToolSpecs(request.tools)
+    if (tools.length > 0) {
+      body.tools = tools.map((tool) => ({
+        functionDeclarations: [{
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.inputSchema
+        }]
       }))
     }
     return body
@@ -745,6 +786,16 @@ export class DeepseekCompatModelClient implements ModelClient {
         reasoningAccumulator
       )
     }
+    if (endpointFormat === 'gemini') {
+      return this.consumeGeminiStreamPayload(
+        payload,
+        pendingArguments,
+        pendingByIndex,
+        completedToolCalls,
+        textAccumulator,
+        reasoningAccumulator
+      )
+    }
     const chunks: ModelStreamChunk[] = []
     let text = textAccumulator
     let reasoning = reasoningAccumulator
@@ -927,6 +978,68 @@ export class DeepseekCompatModelClient implements ModelClient {
     return { chunks, text, reasoning, finishReason, usage }
   }
 
+  private consumeGeminiStreamPayload(
+    payload: Record<string, unknown>,
+    pendingArguments: Map<string, PendingToolCall>,
+    pendingByIndex: Map<number, string>,
+    completedToolCalls: Set<string>,
+    textAccumulator: string,
+    reasoningAccumulator: string
+  ): {
+    chunks: ModelStreamChunk[]
+    text: string
+    reasoning: string
+    finishReason: string | null
+    usage: UsageSnapshot | null
+  } {
+    const chunks: ModelStreamChunk[] = []
+    let text = textAccumulator
+    let reasoning = reasoningAccumulator
+    let finishReason: string | null = null
+    let usage: UsageSnapshot | null = null
+
+    const candidates = payload.candidates as Array<Record<string, unknown>> | undefined
+    if (!Array.isArray(candidates) || candidates.length === 0) {
+      return { chunks, text, reasoning, finishReason, usage }
+    }
+
+    const candidate = candidates[0]
+    const content = candidate.content as Record<string, unknown> | undefined
+    const parts = content?.parts as Array<Record<string, unknown>> | undefined
+
+    if (Array.isArray(parts)) {
+      for (const part of parts) {
+        const partText = recordString(part, 'text')
+        if (partText) {
+          text += partText
+          chunks.push({ kind: 'assistant_text_delta', text: partText })
+        }
+        const functionCall = part.functionCall as Record<string, unknown> | undefined
+        if (functionCall && typeof functionCall === 'object') {
+          const callId = recordString(functionCall, 'name') || `call_${pendingArguments.size + 1}`
+          const name = recordString(functionCall, 'name')
+          const args = functionCall.args as Record<string, unknown> | undefined
+          if (name && args) {
+            chunks.push({
+              kind: 'tool_call_complete',
+              callId,
+              toolName: name,
+              arguments: args
+            })
+            completedToolCalls.add(callId)
+          }
+        }
+      }
+    }
+
+    const finishReasonValue = recordString(candidate, 'finishReason')
+    if (finishReasonValue) {
+      finishReason = finishReasonValue === 'MAX_TOKENS' ? 'length' : 'stop'
+    }
+
+    return { chunks, text, reasoning, finishReason, usage }
+  }
+
   private consumeAnthropicMessagesStreamPayload(
     payload: Record<string, unknown>,
     pendingArguments: Map<string, PendingToolCall>,
@@ -1044,6 +1157,10 @@ export class DeepseekCompatModelClient implements ModelClient {
       yield* this.materializeAnthropicMessagesNonStreaming(payload as unknown as AnthropicMessageResponse)
       return
     }
+    if (endpointFormat === 'gemini') {
+      yield* this.materializeGeminiNonStreaming(payload as unknown as Record<string, unknown>)
+      return
+    }
     const choice = payload.choices?.[0]
     if (!choice) {
       yield { kind: 'error', message: 'model response contained no choices' }
@@ -1075,6 +1192,49 @@ export class DeepseekCompatModelClient implements ModelClient {
     if (choice.finish_reason === 'tool_calls') stopReason = 'tool_calls'
     else if (choice.finish_reason === 'length') stopReason = 'length'
     else if (choice.finish_reason === 'error') stopReason = 'error'
+    yield { kind: 'completed', stopReason }
+  }
+
+  private *materializeGeminiNonStreaming(
+    payload: Record<string, unknown>
+  ): Generator<ModelStreamChunk> {
+    let sawToolCall = false
+    const candidates = payload.candidates as Array<Record<string, unknown>> | undefined
+    if (!Array.isArray(candidates) || candidates.length === 0) {
+      yield { kind: 'error', message: 'model response contained no candidates' }
+      return
+    }
+    const candidate = candidates[0]
+    const content = candidate.content as Record<string, unknown> | undefined
+    const parts = content?.parts as Array<Record<string, unknown>> | undefined
+    if (Array.isArray(parts)) {
+      for (const part of parts) {
+        const text = recordString(part, 'text')
+        if (text) yield { kind: 'assistant_text_delta', text }
+        const functionCall = part.functionCall as Record<string, unknown> | undefined
+        if (functionCall && typeof functionCall === 'object') {
+          const callId = recordString(functionCall, 'name') || 'tool_call'
+          const name = recordString(functionCall, 'name')
+          const args = functionCall.args as Record<string, unknown> | undefined
+          if (name && args) {
+            sawToolCall = true
+            yield {
+              kind: 'tool_call_complete',
+              callId,
+              toolName: name,
+              arguments: args
+            }
+          }
+        }
+      }
+    }
+    if (payload.usageMetadata) {
+      const usage = payload.usageMetadata as Record<string, unknown>
+      yield { kind: 'usage', usage: this.mapUsage(usage) }
+    }
+    const finishReason = recordString(candidate, 'finishReason')
+    let stopReason: ModelStopReason = sawToolCall ? 'tool_calls' : 'stop'
+    if (finishReason === 'MAX_TOKENS') stopReason = 'length'
     yield { kind: 'completed', stopReason }
   }
 
@@ -1273,6 +1433,38 @@ function messagesToResponsesInput(messages: ChatMessage[]): Array<Record<string,
   return input
 }
 
+function messagesToGemini(messages: ChatMessage[]): { system: string; contents: Array<Record<string, unknown>> } {
+  const system: string[] = []
+  const contents: Array<Record<string, unknown>> = []
+  for (const message of messages) {
+    if (message.role === 'system') {
+      const text = chatContentToPlainText(message.content).trim()
+      if (text) system.push(text)
+      continue
+    }
+    const parts: Array<Record<string, unknown>> = []
+    const content = chatContentToPlainText(message.content)
+    if (content.trim()) {
+      parts.push({ text: content })
+    }
+    for (const call of message.tool_calls ?? []) {
+      parts.push({
+        functionCall: {
+          name: call.function.name,
+          args: repairToolArguments(call.function.arguments).arguments
+        }
+      })
+    }
+    if (parts.length > 0) {
+      contents.push({
+        role: message.role === 'assistant' ? 'model' : message.role,
+        parts
+      })
+    }
+  }
+  return { system: system.join('\n\n'), contents }
+}
+
 function messagesToAnthropic(messages: ChatMessage[]): { system: string; messages: AnthropicMessage[] } {
   const system: string[] = []
   const out: AnthropicMessage[] = []
@@ -1414,7 +1606,7 @@ function buildModelEndpointUrl(baseUrl: string, endpointFormat: ModelEndpointFor
 
 function stripKnownEndpointPath(baseUrl: string): string {
   const lower = baseUrl.toLowerCase()
-  for (const path of ['chat/completions', 'responses', 'messages']) {
+  for (const path of ['chat/completions', 'responses', 'messages', 'models/gemini-pro:generateContent']) {
     if (lower.endsWith(`/${path}`)) {
       return baseUrl.slice(0, -path.length).replace(/\/+$/, '')
     }

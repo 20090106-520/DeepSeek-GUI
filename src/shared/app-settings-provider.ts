@@ -12,9 +12,74 @@ import {
 import { normalizeModelEndpointFormat } from '../../kun/src/contracts/model-endpoint-format.js'
 import { getKunRuntimeSettings } from './app-settings-kun'
 import { normalizeDeepseekBaseUrl } from './app-settings-normalizers'
-import { DEFAULT_COMPOSER_MODEL_IDS } from './default-composer-models'
+import {
+  ANTHROPIC_MODEL_IDS,
+  DEFAULT_COMPOSER_MODEL_IDS,
+  DEEPSEEK_MODEL_IDS,
+  GEMINI_MODEL_IDS,
+  OPENAI_MODEL_IDS,
+  SAPIENS_MODEL_IDS
+} from './default-composer-models'
 
 const DEFAULT_MODEL_PROVIDER_NAME = 'DeepSeek'
+
+export const PRESET_PROVIDERS: Record<string, {
+  id: string
+  name: string
+  baseUrl: string
+  endpointFormat: 'chat_completions' | 'responses' | 'messages' | 'gemini'
+  models: string[]
+}> = {
+  deepseek: {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    baseUrl: 'https://api.deepseek.com',
+    endpointFormat: 'chat_completions',
+    models: [...DEEPSEEK_MODEL_IDS]
+  },
+  openai: {
+    id: 'openai',
+    name: 'OpenAI',
+    baseUrl: 'https://api.openai.com/v1',
+    endpointFormat: 'chat_completions',
+    models: [...OPENAI_MODEL_IDS]
+  },
+  anthropic: {
+    id: 'anthropic',
+    name: 'Anthropic',
+    baseUrl: 'https://api.anthropic.com/v1',
+    endpointFormat: 'messages',
+    models: [...ANTHROPIC_MODEL_IDS]
+  },
+  gemini: {
+    id: 'gemini',
+    name: 'Google Gemini',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1',
+    endpointFormat: 'gemini',
+    models: [...GEMINI_MODEL_IDS]
+  },
+  sapiens: {
+    id: 'sapiens',
+    name: 'Sapiens AI',
+    baseUrl: 'https://api.siray.ai/v1',
+    endpointFormat: 'chat_completions',
+    models: [...SAPIENS_MODEL_IDS]
+  }
+}
+
+export type PresetProviderId = keyof typeof PRESET_PROVIDERS
+
+export function createPresetProviderProfile(presetId: PresetProviderId, apiKey: string): ModelProviderProfileV1 {
+  const preset = PRESET_PROVIDERS[presetId]
+  return {
+    id: preset.id,
+    name: preset.name,
+    apiKey: apiKey.trim(),
+    baseUrl: normalizeDeepseekBaseUrl(preset.baseUrl),
+    endpointFormat: preset.endpointFormat,
+    models: [...preset.models]
+  }
+}
 
 export function defaultModelProviderSettings(): ModelProviderSettingsV1 {
   const defaultProvider = defaultModelProviderProfile('', DEFAULT_DEEPSEEK_BASE_URL)

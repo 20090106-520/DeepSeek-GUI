@@ -452,11 +452,17 @@ export type GuiUpdateConfigV1 = {
   channel: GuiUpdateChannel
 }
 
+export type ModelProviderSelectionV1 = {
+  id: string
+  name: string
+}
+
 export type AppSettingsV1 = {
   version: 1
   locale: 'en' | 'zh'
   theme: 'system' | 'light' | 'dark'
   uiFontScale: UiFontScale
+  modelProvider: ModelProviderSelectionV1
   provider: ModelProviderSettingsV1
   agents: KunSettingsEnvelopeV1
   workspaceRoot: string
