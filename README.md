@@ -1,3 +1,38 @@
+# DeepSeek-GUI 拓展修复版
+
+本仓库为二次衍生修改项目  
+上游原项目地址：`https://github.com/XingYu-Zhong/DeepSeek-GUI`  
+原生开源协议：MIT License
+
+## 修改说明
+
+1. 所有原生源码、版权注释、MIT许可证文件完整保留，无删减
+2. Bug修复与新增拓展功能由AI辅助开发完成
+3. 改动内容：
+   - 修复原项目：
+     - 修复 kun-process 测试中 MCP 服务器配置被系统 mcp.json 覆盖的问题
+     - 修复 macOS 签名候选项在 Windows 上路径分隔符识别失败的问题
+     - 修复 AppErrorBoundary componentDidCatch 中重复调用 logError 的问题
+     - 修复 ConnectPhoneView/SidebarClawDialog useEffect 缺少依赖的 ESLint 警告
+     - 修复 builtin-image-tool 和 builtin-video-tool 的 LocalTool 接口类型错误
+   - 新增拓展功能：
+     - 多模型提供商兼容（OpenAI、Anthropic、Google Gemini、Sapiens AI）
+     - API密钥测试和自动拉取模型列表功能
+     - 图像和视频生成工具支持（generate_image / generate_video）
+     - Computer Use MCP 插件（@anthropic-ai/computer-use-mcp，支持截屏、鼠标、键盘等桌面控制）
+     - 用户偏好管理系统
+     - 可访问性增强（多档字体大小、主题颜色自定义）
+     - 全局错误处理系统
+     - 用户反馈收集机制
+     - 隐私保护与数据加密功能
+     - 使用统计收集功能
+
+## 使用约束
+
+本项目整体沿用上游 MIT 协议，任何分发、使用行为请遵守原协议条款。
+
+---
+
 <p align="center">
   <img src="src/asset/img/deepseek.png" width="96" alt="DeepSeek GUI 图标">
 </p>
@@ -10,8 +45,8 @@
 
 [官网](https://deepseek-gui.com) | [下载](https://deepseek-gui.com)
 
-[![GitHub release](https://img.shields.io/github/v/release/XingYu-Zhong/DeepSeek-GUI?label=github)](https://github.com/XingYu-Zhong/DeepSeek-GUI/releases)
-[![License](https://img.shields.io/github/license/XingYu-Zhong/DeepSeek-GUI)](./LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/20090106-520/DeepSeek-GUI?label=github)](https://github.com/20090106-520/DeepSeek-GUI/releases)
+[![License](https://img.shields.io/github/license/20090106-520/DeepSeek-GUI)](./LICENSE)
 
 DeepSeek GUI 是一个面向开发者和高频 AI 工作者的本地桌面工作台。它以 Kun 为唯一运行时，把终端里的智能体体验整理成更容易上手、更适合长期使用的应用：选择工作目录，发起任务，实时查看推理、工具调用和文件改动，并在需要时审批或回退。
 
@@ -220,7 +255,7 @@ Kun 运行时与设置，但会话、工作区和界面布局彼此独立，可�
 
 ### 下载预构建安装包
 
-前往 [GitHub Releases](https://github.com/XingYu-Zhong/DeepSeek-GUI/releases) 下载最新版本：
+前往 [GitHub Releases](https://github.com/20090106-520/DeepSeek-GUI/releases) 下载最新版本：
 
 | 平台 | 安装包 |
 | --- | --- |
@@ -349,7 +384,7 @@ Kun 数据默认位于 `~/.deepseekgui/kun` 或应用数据目录下的 Kun data
 
 ## 更新
 
-- 普通用户：可在设置页检查 GUI 更新，或前往 [GitHub Releases](https://github.com/XingYu-Zhong/DeepSeek-GUI/releases) 下载最新安装包。
+- 普通用户：可在设置页检查 GUI 更新，或前往 [GitHub Releases](https://github.com/20090106-520/DeepSeek-GUI/releases) 下载最新安装包。
 
 ## 贡献指南
 
@@ -409,8 +444,8 @@ Kun 的设计站在先行项目的肩膀上：
 - **[DeepSeek](https://github.com/deepseek-ai)**：提供模型与 API。
 - 所有为 DeepSeek GUI 提交 issue、建议、代码和文档的贡献者。
 
-<a href="https://github.com/XingYu-Zhong/DeepSeek-GUI/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=XingYu-Zhong/DeepSeek-GUI" />
+<a href="https://github.com/20090106-520/DeepSeek-GUI/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=20090106-520/DeepSeek-GUI" />
 </a>
 
 > [!NOTE]
@@ -422,4 +457,4 @@ Kun 的设计站在先行项目的肩膀上：
 
 ## Star 历史
 
-[![Star History Chart](https://api.star-history.com/chart?repos=XingYu-Zhong/DeepSeek-GUI&type=date&legend=top-left)](https://www.star-history.com/?repos=XingYu-Zhong%2FDeepSeek-GUI&type=date&logscale=&legend=top-left)
+[![Star History Chart](https://api.star-history.com/chart?repos=20090106-520/DeepSeek-GUI&type=date&legend=top-left)](https://www.star-history.com/?repos=20090106-520%2FDeepSeek-GUI&type=date&logscale=&legend=top-left)

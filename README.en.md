@@ -10,8 +10,8 @@
 
 [Website](https://deepseek-gui.com) | [Download](https://deepseek-gui.com)
 
-[![GitHub release](https://img.shields.io/github/v/release/XingYu-Zhong/DeepSeek-GUI?label=github)](https://github.com/XingYu-Zhong/DeepSeek-GUI/releases)
-[![License](https://img.shields.io/github/license/XingYu-Zhong/DeepSeek-GUI)](./LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/20090106-520/DeepSeek-GUI?label=github)](https://github.com/20090106-520/DeepSeek-GUI/releases)
+[![License](https://img.shields.io/github/license/20090106-520/DeepSeek-GUI)](./LICENSE)
 
 DeepSeek GUI is a local desktop workbench for developers and frequent AI users. It uses Kun as the only runtime and turns the terminal agent experience into an easier, longer-lived app: choose a workspace, start a task, watch reasoning and tool calls stream in, review file changes, and approve sensitive actions when needed.
 
@@ -237,7 +237,7 @@ Background automation and IM integration, so Kun can keep handling phone message
 
 ### Download a Pre-built Package
 
-Download the latest build from [GitHub Releases](https://github.com/XingYu-Zhong/DeepSeek-GUI/releases):
+Download the latest build from [GitHub Releases](https://github.com/20090106-520/DeepSeek-GUI/releases):
 
 | Platform | Package |
 | --- | --- |
@@ -366,7 +366,7 @@ Kun data lives under `~/.deepseekgui/kun` or the configured Kun data dir. Check 
 
 ## Updates
 
-- For regular users: check GUI updates in Settings or download the latest installer from [GitHub Releases](https://github.com/XingYu-Zhong/DeepSeek-GUI/releases).
+- For regular users: check GUI updates in Settings or download the latest installer from [GitHub Releases](https://github.com/20090106-520/DeepSeek-GUI/releases).
 
 ## Contributing
 
@@ -426,8 +426,8 @@ We are also grateful to:
 - **[DeepSeek](https://github.com/deepseek-ai)**: for the models and API.
 - Everyone who contributes issues, ideas, code, and documentation to DeepSeek GUI.
 
-<a href="https://github.com/XingYu-Zhong/DeepSeek-GUI/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=XingYu-Zhong/DeepSeek-GUI" />
+<a href="https://github.com/20090106-520/DeepSeek-GUI/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=20090106-520/DeepSeek-GUI" />
 </a>
 
 > [!NOTE]
@@ -439,4 +439,4 @@ We are also grateful to:
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/chart?repos=XingYu-Zhong/DeepSeek-GUI&type=date&legend=top-left)](https://www.star-history.com/?repos=XingYu-Zhong%2FDeepSeek-GUI&type=date&logscale=&legend=top-left)
+[![Star History Chart](https://api.star-history.com/chart?repos=20090106-520/DeepSeek-GUI&type=date&legend=top-left)](https://www.star-history.com/?repos=20090106-520%2FDeepSeek-GUI&type=date&logscale=&legend=top-left)
