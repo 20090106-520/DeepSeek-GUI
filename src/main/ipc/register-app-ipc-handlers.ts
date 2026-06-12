@@ -824,4 +824,88 @@ export function registerAppIpcHandlers(options: RegisterAppIpcHandlersOptions): 
     if (error) return { ok: false, message: error }
     return { ok: true }
   })
+
+  ipcMain.handle('agnes:generate-image', async (_, payload: unknown) => {
+    const request = parseIpcPayload('agnes:generate-image', z.object({
+      prompt: z.string().min(1).max(MAX_BODY_BYTES),
+      model: z.string().max(256).optional(),
+      style: z.string().max(64).optional(),
+      width: z.number().int().min(256).max(4096).optional(),
+      height: z.number().int().min(256).max(4096).optional()
+    }).strict(), payload)
+    const settings = readAppSettings()
+    const agnes = settings.agnesGeneration
+    if (!agnes.enabled || !agnes.apiKey.trim()) {
+      return { ok: false, message: 'Agnes image generation is not configured. Please set API key in Settings.' }
+    }
+    try {
+      const baseUrl = agnes.baseUrl.replace(/\/+$/, '')
+      const model = request.model || agnes.imageModel
+      const res = await fetch(`${baseUrl}/images/generations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${agnes.apiKey.trim()}`
+        },
+        body: JSON.stringify({
+          model,
+          prompt: request.prompt,
+          n: 1,
+          size: request.width && request.height ? `${request.width}x${request.height}` : undefined,
+          style: request.style
+        })
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        return { ok: false, message: `API error ${res.status}: ${text.slice(0, 500)}` }
+      }
+      const data = await res.json() as { data?: Array<{ url?: string; b64_json?: string }> }
+      const item = data.data?.[0]
+      if (!item) return { ok: false, message: 'No image data in response' }
+      return { ok: true, imageUrl: item.url ?? '', imageBase64: item.b64_json }
+    } catch (e) {
+      return { ok: false, message: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  ipcMain.handle('agnes:generate-video', async (_, payload: unknown) => {
+    const request = parseIpcPayload('agnes:generate-video', z.object({
+      prompt: z.string().min(1).max(MAX_BODY_BYTES),
+      model: z.string().max(256).optional(),
+      duration: z.number().int().min(5).max(60).optional(),
+      aspectRatio: z.string().max(16).optional()
+    }).strict(), payload)
+    const settings = readAppSettings()
+    const agnes = settings.agnesGeneration
+    if (!agnes.enabled || !agnes.apiKey.trim()) {
+      return { ok: false, message: 'Agnes video generation is not configured. Please set API key in Settings.' }
+    }
+    try {
+      const baseUrl = agnes.baseUrl.replace(/\/+$/, '')
+      const model = request.model || agnes.videoModel
+      const res = await fetch(`${baseUrl}/video/generations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${agnes.apiKey.trim()}`
+        },
+        body: JSON.stringify({
+          model,
+          prompt: request.prompt,
+          duration: request.duration,
+          aspect_ratio: request.aspectRatio
+        })
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        return { ok: false, message: `API error ${res.status}: ${text.slice(0, 500)}` }
+      }
+      const data = await res.json() as { data?: Array<{ url?: string; thumbnail_url?: string }> }
+      const item = data.data?.[0]
+      if (!item) return { ok: false, message: 'No video data in response' }
+      return { ok: true, videoUrl: item.url ?? '', thumbnailUrl: item.thumbnail_url }
+    } catch (e) {
+      return { ok: false, message: e instanceof Error ? e.message : String(e) }
+    }
+  })
 }

@@ -554,6 +554,74 @@ export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): R
                 />
               </SettingsCard>
 
+              <SettingsCard title={t('agnesGenerationTitle')} className="mt-6">
+                <p className="text-sm text-ds-muted mb-4">{t('agnesGenerationDesc')}</p>
+                <SettingRow
+                  title={t('agnesGenerationEnabled')}
+                  description={t('agnesGenerationEnabledDesc')}
+                  control={
+                    <Toggle
+                      checked={form.agnesGeneration?.enabled ?? false}
+                      onChange={(v) => update({ agnesGeneration: { enabled: v } })}
+                    />
+                  }
+                />
+                {(form.agnesGeneration?.enabled) && (
+                  <>
+                    <SettingRow
+                      title={t('agnesGenerationBaseUrl')}
+                      description={t('agnesGenerationBaseUrlDesc')}
+                      control={
+                        <input
+                          type="text"
+                          className="w-full rounded-lg border border-ds-border bg-ds-card px-3 py-1.5 text-sm text-ds-ink outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+                          value={form.agnesGeneration?.baseUrl ?? ''}
+                          onChange={(e) => update({ agnesGeneration: { baseUrl: e.target.value } })}
+                          placeholder="https://api.siliconflow.cn/v1"
+                        />
+                      }
+                    />
+                    <SettingRow
+                      title={t('agnesGenerationApiKey')}
+                      description={t('agnesGenerationApiKeyDesc')}
+                      control={
+                        <SecretInput
+                          value={form.agnesGeneration?.apiKey ?? ''}
+                          onChange={(v) => update({ agnesGeneration: { apiKey: v } })}
+                          placeholder="sk-..."
+                        />
+                      }
+                    />
+                    <SettingRow
+                      title={t('agnesGenerationImageModel')}
+                      description={t('agnesGenerationImageModelDesc')}
+                      control={
+                        <input
+                          type="text"
+                          className="w-full rounded-lg border border-ds-border bg-ds-card px-3 py-1.5 text-sm text-ds-ink outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+                          value={form.agnesGeneration?.imageModel ?? ''}
+                          onChange={(e) => update({ agnesGeneration: { imageModel: e.target.value } })}
+                          placeholder="stabilityai/stable-diffusion-3-5-large"
+                        />
+                      }
+                    />
+                    <SettingRow
+                      title={t('agnesGenerationVideoModel')}
+                      description={t('agnesGenerationVideoModelDesc')}
+                      control={
+                        <input
+                          type="text"
+                          className="w-full rounded-lg border border-ds-border bg-ds-card px-3 py-1.5 text-sm text-ds-ink outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+                          value={form.agnesGeneration?.videoModel ?? ''}
+                          onChange={(e) => update({ agnesGeneration: { videoModel: e.target.value } })}
+                          placeholder="tencent/HunyuanVideo"
+                        />
+                      }
+                    />
+                  </>
+                )}
+              </SettingsCard>
+
               <SettingsCard title={t('logTitle')} className="mt-6">
                 <SettingRow
                   title={t('logEnabled')}

@@ -591,5 +591,17 @@
   "averageSessionLength": "平均会话长度",
   "mostUsedFeatures": "最常用功能",
   "usageThisWeek": "本周使用",
-  "usageToday": "今日使用"
+  "usageToday": "今日使用",
+  "agnesGenerationTitle": "Agnes AI 图像/视频生成",
+  "agnesGenerationDesc": "配置 Agnes AI 面板使用的图像和视频生成 API 端点。支持兼容 OpenAI 格式的第三方服务（如硅基流动 SiliconFlow、智谱 ZhipuAI 等）。",
+  "agnesGenerationEnabled": "启用图像/视频生成",
+  "agnesGenerationEnabledDesc": "开启后，Agnes AI 面板的生图和生视频功能将调用配置的 API 端点。",
+  "agnesGenerationBaseUrl": "API 服务地址",
+  "agnesGenerationBaseUrlDesc": "图像/视频生成 API 的基础地址，需兼容 OpenAI 格式。",
+  "agnesGenerationApiKey": "API Key",
+  "agnesGenerationApiKeyDesc": "用于访问图像/视频生成服务的 API Key。",
+  "agnesGenerationImageModel": "图像生成模型",
+  "agnesGenerationImageModelDesc": "图像生成使用的模型 ID，取决于你选择的 API 服务。",
+  "agnesGenerationVideoModel": "视频生成模型",
+  "agnesGenerationVideoModelDesc": "视频生成使用的模型 ID，取决于你选择的 API 服务。"
 }

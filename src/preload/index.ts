@@ -177,6 +177,10 @@ const api = {
     ipcRenderer.invoke('plugin:uninstall', payload),
   togglePlugin: (payload) =>
     ipcRenderer.invoke('plugin:toggle', payload),
+  agnesGenerateImage: (payload) =>
+    ipcRenderer.invoke('agnes:generate-image', payload),
+  agnesGenerateVideo: (payload) =>
+    ipcRenderer.invoke('agnes:generate-video', payload),
 } satisfies DsGuiApi
 
 contextBridge.exposeInMainWorld('dsGui', api)

@@ -450,6 +450,22 @@ export type ScheduleRuntimeStatus = {
   powerSaveBlockerActive: boolean
 }
 
+export type AgnesGenerationProviderV1 = {
+  enabled: boolean
+  baseUrl: string
+  apiKey: string
+  imageModel: string
+  videoModel: string
+}
+
+export const DEFAULT_AGNES_GENERATION_PROVIDER: AgnesGenerationProviderV1 = {
+  enabled: false,
+  baseUrl: 'https://api.siliconflow.cn/v1',
+  apiKey: '',
+  imageModel: 'stabilityai/stable-diffusion-3-5-large',
+  videoModel: 'tencent/HunyuanVideo'
+}
+
 export type GuiUpdateConfigV1 = {
   channel: GuiUpdateChannel
 }
@@ -497,6 +513,7 @@ export type AppSettingsV1 = {
   claw: ClawSettingsV1
   schedule: ScheduleSettingsV1
   guiUpdate: GuiUpdateConfigV1
+  agnesGeneration: AgnesGenerationProviderV1
   codePromptPrefix: string
   preferences: UserPreferenceV1
 }
@@ -516,5 +533,6 @@ export type AppSettingsPatch = Partial<
   claw?: ClawSettingsPatchV1
   schedule?: ScheduleSettingsPatchV1
   guiUpdate?: Partial<GuiUpdateConfigV1>
+  agnesGeneration?: Partial<AgnesGenerationProviderV1>
   preferences?: UserPreferencesPatchV1
 }

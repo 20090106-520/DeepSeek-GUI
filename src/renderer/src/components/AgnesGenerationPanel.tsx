@@ -120,50 +120,72 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
 
     try {
       const model = selectedModel
-      let typeLabel: string
-      let systemPrompt: string
+      const dsGui = window.dsGui
 
-      switch (generationType) {
-        case 'image':
-          typeLabel = t('agnesImageGeneration')
-          systemPrompt = 'You are an AI image generation assistant. Generate a high-quality image based on the user prompt.'
-          break
-        case 'video':
-          typeLabel = t('agnesVideoGeneration')
-          systemPrompt = 'You are an AI video generation assistant. Generate a high-quality video based on the user prompt. Support audio-video sync when applicable.'
-          break
-        case 'edit':
-          typeLabel = t('agnesImageEdit')
-          systemPrompt = 'You are an AI image editing assistant. Modify the provided image according to the user instructions while preserving the original structure.'
-          break
-        case 'understand':
-          typeLabel = t('agnesMultimodalUnderstand')
-          systemPrompt = 'You are a multimodal AI assistant. Analyze and understand the provided image or video content in detail.'
-          break
-      }
-
-      const hasImage = generationType === 'edit' || generationType === 'understand'
-      const imageInfo = hasImage && uploadedImageName ? `\n**${t('agnesReferenceImage')}**: ${uploadedImageName}` : ''
-
-      const message = `[Agnes AI - ${typeLabel}]\n\n**${t('agnesModel')}**: ${model}\n**${t('agnesPrompt')}**: ${prompt}${imageInfo}\n\n[Processing...]`
-
-      addComposerMessage({
-        role: 'user',
-        content: message
-      })
-
-      setTimeout(() => {
-        addComposerMessage({
-          role: 'assistant',
-          content: `[Agnes AI ${typeLabel}]\n\n${t('agnesRequestSubmitted')}\n\n**${t('agnesModel')}**: ${model}\n**${t('agnesPrompt')}**: ${prompt}${imageInfo}\n\n${t('agnesApiNote')}`
+      if (generationType === 'image' || generationType === 'edit') {
+        const result = await dsGui.agnesGenerateImage({
+          prompt,
+          model,
+          style: generationType === 'edit' ? 'edit' : undefined,
+          width: 1024,
+          height: 1024
         })
-        setGenerating(false)
-        setPrompt('')
-      }, 1000)
-    } catch {
+
+        if (result.ok) {
+          const imageContent = result.imageBase64
+            ? `![${prompt}](${result.imageUrl || 'data:image/png;base64,' + result.imageBase64})`
+            : `![${prompt}](${result.imageUrl})`
+          addComposerMessage({
+            role: 'assistant',
+            content: `[Agnes AI - ${generationType === 'edit' ? t('agnesImageEdit') : t('agnesImageGeneration')}]\n\n**${t('agnesModel')}**: ${model}\n**${t('agnesPrompt')}**: ${prompt}\n\n${imageContent}`
+          })
+        } else {
+          addComposerMessage({
+            role: 'assistant',
+            content: `[Agnes AI] ❌ ${result.message}`
+          })
+        }
+      } else if (generationType === 'video') {
+        const result = await dsGui.agnesGenerateVideo({
+          prompt,
+          model,
+          duration: 10,
+          aspectRatio: '16:9'
+        })
+
+        if (result.ok) {
+          addComposerMessage({
+            role: 'assistant',
+            content: `[Agnes AI - ${t('agnesVideoGeneration')}]\n\n**${t('agnesModel')}**: ${model}\n**${t('agnesPrompt')}**: ${prompt}\n\n🎬 [${t('agnesVideoLink')}](${result.videoUrl})`
+          })
+        } else {
+          addComposerMessage({
+            role: 'assistant',
+            content: `[Agnes AI] ❌ ${result.message}`
+          })
+        }
+      } else {
+        addComposerMessage({
+          role: 'user',
+          content: `[Agnes AI - ${t('agnesMultimodalUnderstand')}]\n\n**${t('agnesModel')}**: ${model}\n**${t('agnesPrompt')}**: ${prompt}\n\n[Processing...]`
+        })
+        setTimeout(() => {
+          addComposerMessage({
+            role: 'assistant',
+            content: `[Agnes AI] ${t('agnesApiNote')}`
+          })
+        }, 1000)
+      }
+    } catch (e) {
+      addComposerMessage({
+        role: 'assistant',
+        content: `[Agnes AI] ❌ ${e instanceof Error ? e.message : String(e)}`
+      })
+    } finally {
       setGenerating(false)
+      setPrompt('')
     }
-  }, [prompt, selectedModel, generationType, addComposerMessage, generating, uploadedImage, uploadedImageName, t])
+  }, [prompt, selectedModel, generationType, addComposerMessage, generating, uploadedImage, t])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {

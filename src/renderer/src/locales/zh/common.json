@@ -76,6 +76,7 @@
   "agnesReferenceImage": "参考图片",
   "agnesRequestSubmitted": "生成请求已提交。",
   "agnesApiNote": "提示：完整 API 集成需要配置 Agnes AI API。",
+  "agnesVideoLink": "查看视频",
   "agnesScenarios": "适用场景",
   "agnesScenarioTextToImage": "文生图",
   "agnesScenarioProduct": "商品图生成",

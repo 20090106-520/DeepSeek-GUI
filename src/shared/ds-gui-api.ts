@@ -306,4 +306,29 @@ export type DsGuiApi = {
   installPlugin: (payload: PluginInstallPayload) => Promise<PluginInstallResult>
   uninstallPlugin: (payload: PluginUninstallPayload) => Promise<PluginUninstallResult>
   togglePlugin: (payload: PluginTogglePayload) => Promise<PluginToggleResult>
+  agnesGenerateImage: (payload: AgnesImageGenerationPayload) => Promise<AgnesImageGenerationResult>
+  agnesGenerateVideo: (payload: AgnesVideoGenerationPayload) => Promise<AgnesVideoGenerationResult>
 }
+
+export type AgnesImageGenerationPayload = {
+  prompt: string
+  model?: string
+  style?: string
+  width?: number
+  height?: number
+}
+
+export type AgnesImageGenerationResult =
+  | { ok: true; imageUrl: string; imageBase64?: string }
+  | { ok: false; message: string }
+
+export type AgnesVideoGenerationPayload = {
+  prompt: string
+  model?: string
+  duration?: number
+  aspectRatio?: string
+}
+
+export type AgnesVideoGenerationResult =
+  | { ok: true; videoUrl: string; thumbnailUrl?: string }
+  | { ok: false; message: string }

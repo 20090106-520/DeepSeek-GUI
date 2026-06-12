@@ -1,9 +1,11 @@
 import {
   DEFAULT_GUI_UPDATE_CHANNEL,
   DEFAULT_USER_PREFERENCES,
+  DEFAULT_AGNES_GENERATION_PROVIDER,
   normalizeGuiUpdateChannel,
   type AppBehaviorConfigV1,
   type AppSettingsV1,
+  type AgnesGenerationProviderV1,
   type ClawSettingsPatchV1,
   type GuiUpdateConfigV1,
   type NotificationConfigV1,
@@ -89,6 +91,7 @@ export function normalizeAppSettings(settings: AppSettingsV1): AppSettingsV1 {
         maybeSettings.guiUpdate?.channel ?? DEFAULT_GUI_UPDATE_CHANNEL
       )
     },
+    agnesGeneration: normalizeAgnesGenerationSettings(maybeSettings.agnesGeneration),
     codePromptPrefix: typeof maybeSettings.codePromptPrefix === 'string' ? maybeSettings.codePromptPrefix : '',
     preferences: normalizeUserPreferences(maybeSettings.preferences)
   }
@@ -109,6 +112,15 @@ export function normalizeAppBehaviorSettings(
     openAtLogin,
     startMinimized: openAtLogin && settings?.startMinimized === true,
     closeToTray: settings?.closeToTray === true
+  }
+}
+
+function normalizeAgnesGenerationSettings(
+  settings?: Partial<AgnesGenerationProviderV1>
+): AgnesGenerationProviderV1 {
+  return {
+    ...DEFAULT_AGNES_GENERATION_PROVIDER,
+    ...settings
   }
 }
 
