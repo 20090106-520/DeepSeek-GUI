@@ -1,7 +1,7 @@
 {
   "name": "deepseek-gui",
   "productName": "DeepSeek GUI",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Electron workbench for the Kun runtime (HTTP/SSE)",
   "main": "./out/main/index.js",
   "type": "module",
@@ -25,7 +25,8 @@
     "dist:linux": "npm run dist -- --linux AppImage --x64",
     "release:all": "bash ./scripts/release-mac.sh",
     "release:mac": "bash ./scripts/release-mac.sh",
-    "release:win": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/release-win.ps1",
+    "release:win": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/auto-release.ps1",
+    "auto:release": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/auto-release.ps1",
     "r2:upload": "node ./scripts/publish-r2.mjs upload",
     "r2:promote": "node ./scripts/publish-r2.mjs promote",
     "postinstall": "node ./scripts/postinstall.cjs",
