@@ -631,7 +631,7 @@ async function ensureKunRuntime(settings: AppSettingsV1): Promise<void> {
     console.error('[deepseek-gui] failed to start kun:', e)
     throw e
   }
-  const started = await waitForKunHealth(settings, 20_000)
+  const started = await waitForKunHealth(settings, 60_000)
   if (!started) {
     throw runtimeJsonError(
       'runtime_unhealthy',
