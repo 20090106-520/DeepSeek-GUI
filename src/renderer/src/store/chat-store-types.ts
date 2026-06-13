@@ -73,7 +73,7 @@ export type SendMessageOverrides = {
 
 export type InitialSetupMode = 'required' | 'preview'
 export type SettingsRouteSection = 'general' | 'write' | 'agents' | 'skill' | 'mcp' | 'shortcuts' | 'claw'
-export type AppRoute = 'chat' | 'write' | 'settings' | 'plugins' | 'claw' | 'schedule' | 'drama' | 'workflow'
+export type AppRoute = 'chat' | 'write' | 'settings' | 'plugins' | 'claw' | 'schedule' | 'drama' | 'workflow' | 'modelMarket'
 export type PluginHostRoute = 'chat' | 'claw'
 
 /**
@@ -171,6 +171,7 @@ export type ChatState = {
   openClaw: () => void
   openSchedule: () => void
   openDrama: () => void
+  openModelMarket: () => void
   refreshClawChannels: () => Promise<void>
   addClawChannel: (
     provider: ClawImProvider,

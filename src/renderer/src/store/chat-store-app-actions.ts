@@ -31,6 +31,7 @@ export function createAppActions(options: CreateAppActionsOptions): Pick<
   | 'openClaw'
   | 'openSchedule'
   | 'openDrama'
+  | 'openModelMarket'
   | 'openInitialSetup'
   | 'closeInitialSetup'
   | 'selectInspectorItem'
@@ -115,6 +116,10 @@ export function createAppActions(options: CreateAppActionsOptions): Pick<
 
     openDrama: () => {
       set({ route: 'drama' })
+    },
+
+    openModelMarket: () => {
+      set({ route: 'modelMarket' })
     },
 
     openInitialSetup: (mode: InitialSetupMode = 'required') =>

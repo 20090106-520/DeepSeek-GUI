@@ -9,7 +9,8 @@ import {
   Plus,
   Settings,
   Smartphone,
-  Workflow
+  Workflow,
+  Sparkles
 } from 'lucide-react'
 import type { NormalizedThread } from '../../agent/types'
 import { useChatStore, type SettingsRouteSection } from '../../store/chat-store'
@@ -32,7 +33,7 @@ import {
 type Props = {
   threads: NormalizedThread[]
   activeThreadId: string | null
-  activeView: 'chat' | 'write' | 'claw' | 'schedule' | 'drama' | 'workflow'
+  activeView: 'chat' | 'write' | 'claw' | 'schedule' | 'drama' | 'workflow' | 'modelMarket'
   connectPhoneSidebarOpen: boolean
   pluginsActive: boolean
   runtimeReady: boolean
@@ -56,6 +57,7 @@ type Props = {
   onScheduleOpen: () => void
   onDramaOpen: () => void
   onWorkflowOpen: () => void
+  onModelMarketOpen: () => void
   onToggleSidebar: () => void
 }
 
@@ -86,6 +88,7 @@ export function Sidebar({
   onScheduleOpen,
   onDramaOpen,
   onWorkflowOpen,
+  onModelMarketOpen,
   onToggleSidebar
 }: Props): ReactElement {
   const { t, i18n } = useTranslation('common')
@@ -183,6 +186,12 @@ export function Sidebar({
           label={t('workflowTitle')}
           onClick={onWorkflowOpen}
           active={activeView === 'workflow'}
+        />
+        <SidebarCommandRow
+          icon={<Sparkles className="h-4 w-4" strokeWidth={1.75} />}
+          label={t('modelMarket')}
+          onClick={onModelMarketOpen}
+          active={activeView === 'modelMarket'}
         />
       </div>
 

@@ -109,6 +109,9 @@ const DramaStudioView = lazy(() =>
 const WorkflowView = lazy(() =>
   import('./WorkflowView').then((module) => ({ default: module.WorkflowView }))
 )
+const ModelMarketView = lazy(() =>
+  import('./ModelMarketView').then((module) => ({ default: module.ModelMarketView }))
+)
 
 type PendingSddPlanTarget = {
   planId: string
@@ -1468,13 +1471,18 @@ export function Workbench(): ReactElement {
     setRoute('workflow')
   }
 
+  const openModelMarketView = (): void => {
+    setConnectPhoneSidebarOpen(false)
+    setRoute('modelMarket')
+  }
+
   const toggleConnectPhone = (): void => {
     if (activeSddDraft) dismissActiveSddDraft({ closeAssistant: true })
     openClaw()
     setConnectPhoneSidebarOpen((open) => !open)
   }
 
-  const sidebarView: 'chat' | 'write' | 'claw' | 'schedule' | 'drama' | 'workflow' =
+  const sidebarView: 'chat' | 'write' | 'claw' | 'schedule' | 'drama' | 'workflow' | 'modelMarket' =
     route === 'claw' || (route === 'plugins' && pluginHostRoute === 'claw')
       ? 'claw'
       : route === 'schedule'
@@ -1483,6 +1491,8 @@ export function Workbench(): ReactElement {
         ? 'drama'
       : route === 'workflow'
         ? 'workflow'
+      : route === 'modelMarket'
+        ? 'modelMarket'
       : route === 'write'
         ? 'write'
         : 'chat'
@@ -1687,6 +1697,7 @@ export function Workbench(): ReactElement {
               onScheduleOpen={openScheduleView}
               onDramaOpen={openDramaView}
               onWorkflowOpen={openWorkflowView}
+              onModelMarketOpen={openModelMarketView}
               onToggleSidebar={toggleLeftSidebar}
             />
             )}
@@ -1734,6 +1745,19 @@ export function Workbench(): ReactElement {
           <Suspense fallback={<div className="h-full bg-ds-main" />}>
             <WorkflowView />
           </Suspense>
+        ) : route === 'modelMarket' ? (
+          <>
+            <div className="ds-no-drag shrink-0 px-4 pt-4">
+              <SidebarTitlebarToggleButton
+                onClick={toggleLeftSidebar}
+                title={leftSidebarCollapsed ? t('sidebarExpand') : t('sidebarCollapse')}
+                ariaLabel={leftSidebarCollapsed ? t('sidebarExpand') : t('sidebarCollapse')}
+              />
+            </div>
+            <Suspense fallback={<div className="h-full bg-ds-main" />}>
+              <ModelMarketView />
+            </Suspense>
+          </>
         ) : route === 'write' ? (
           <>
             {writeRuntimeBannerMessage ? renderRuntimeBanner(writeRuntimeBannerMessage, runtimeErrorDetail) : null}
