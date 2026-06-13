@@ -48,3 +48,55 @@ export const AGNES_MODEL_IDS = [
   'agnes-video-2.0',
   'agnes-video-2.1'
 ] as const
+
+/** Default model IDs for SiliconFlow (硅基流动) providers */
+export const SILICONFLOW_MODEL_IDS = [
+  'deepseek-ai/DeepSeek-V2.5',
+  'deepseek-ai/DeepSeek-V2-Chat',
+  'Qwen/Qwen2.5-7B-Instruct',
+  'Qwen/Qwen2.5-14B-Instruct',
+  'Qwen/Qwen2.5-32B-Instruct',
+  'Qwen/Qwen2.5-72B-Instruct',
+  'meta-llama/Llama-3.1-70B-Instruct',
+  'meta-llama/Llama-3.1-8B-Instruct',
+  'THUDM/glm-4-9b-chat',
+  '01-ai/Yi-1.5-34B-Chat',
+  '01-ai/Yi-1.5-9B-Chat'
+] as const
+
+/** Default model IDs for 豆包 (火山方舟/Doubao) providers */
+export const DOUBAO_MODEL_IDS = [
+  'doubao-1.5-pro-32k',
+  'doubao-1.5-pro-256k',
+  'doubao-1.5-lite-32k',
+  'doubao-1.5-lite-128k',
+  'doubao-pro-32k',
+  'doubao-pro-128k',
+  'doubao-lite-32k',
+  'doubao-lite-128k'
+] as const
+
+/** Default model IDs for 通义千问 (Tongyi Qianwen) providers */
+export const QWEN_MODEL_IDS = [
+  'qwen-turbo',
+  'qwen-plus',
+  'qwen-max',
+  'qwen-max-longcontext',
+  'qwen-long',
+  'qwen-vl-plus',
+  'qwen-vl-max',
+  'qwen-coder-plus',
+  'qwen-coder-plus-latest'
+] as const
+
+/** Default model IDs for 文心一言 (ERNIE Bot) providers */
+export const ERNIE_MODEL_IDS = [
+  'ernie-4.0-8k',
+  'ernie-4.0-turbo-8k',
+  'ernie-3.5-8k',
+  'ernie-speed-8k',
+  'ernie-speed-128k',
+  'ernie-lite-8k',
+  'ernie-lite-pro-128k',
+  'ernie-char-8k'
+] as const

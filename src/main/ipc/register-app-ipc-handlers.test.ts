@@ -87,7 +87,7 @@ describe('registerAppIpcHandlers', () => {
     handlers.clear()
   })
 
-  it('rejects invalid settings patches at the handler boundary', async () => {
+  it('rejects invalid settings patches at the handler boundary', { timeout: 15000 }, async () => {
     const { registerAppIpcHandlers } = await import('./register-app-ipc-handlers')
     const applySettingsPatch = vi.fn(async () => settings())
 

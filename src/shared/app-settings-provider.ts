@@ -19,7 +19,11 @@ import {
   GEMINI_MODEL_IDS,
   OPENAI_MODEL_IDS,
   SAPIENS_MODEL_IDS,
-  AGNES_MODEL_IDS
+  AGNES_MODEL_IDS,
+  SILICONFLOW_MODEL_IDS,
+  DOUBAO_MODEL_IDS,
+  QWEN_MODEL_IDS,
+  ERNIE_MODEL_IDS
 } from './default-composer-models'
 
 const DEFAULT_MODEL_PROVIDER_NAME = 'DeepSeek'
@@ -72,6 +76,34 @@ export const PRESET_PROVIDERS: Record<string, {
     baseUrl: 'https://api.agnes.ai/v1',
     endpointFormat: 'chat_completions',
     models: [...AGNES_MODEL_IDS]
+  },
+  siliconflow: {
+    id: 'siliconflow',
+    name: '硅基流动 SiliconFlow',
+    baseUrl: 'https://api.siliconflow.cn/v1',
+    endpointFormat: 'chat_completions',
+    models: [...SILICONFLOW_MODEL_IDS]
+  },
+  doubao: {
+    id: 'doubao',
+    name: '豆包 火山方舟',
+    baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+    endpointFormat: 'chat_completions',
+    models: [...DOUBAO_MODEL_IDS]
+  },
+  qwen: {
+    id: 'qwen',
+    name: '通义千问',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    endpointFormat: 'chat_completions',
+    models: [...QWEN_MODEL_IDS]
+  },
+  ernie: {
+    id: 'ernie',
+    name: '文心一言',
+    baseUrl: 'https://qianfan.baidubce.com/v2',
+    endpointFormat: 'chat_completions',
+    models: [...ERNIE_MODEL_IDS]
   }
 }
 
