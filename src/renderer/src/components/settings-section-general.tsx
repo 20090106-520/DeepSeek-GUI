@@ -104,11 +104,20 @@ export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): R
     saveMcpConfig,
     loadMcpConfig,
     openMcpConfigDir,
+    runtimeInfo,
+    toolDiagnostics,
+    memoryRecords,
+    runtimeDiagnosticsBusy,
+    runtimeDiagnosticsNotice,
+    refreshKunDiagnostics,
+    disableMemoryRecord,
+    deleteMemoryRecord,
     pickClawWorkspace,
     resetClawWorkspaceToDefault,
     clawWorkspacePickerError,
     splitSettingsList,
-    listSettingsText
+    listSettingsText,
+    saveStatus
   } = ctx
   
   const handleTestConnection = async () => {
@@ -626,6 +635,11 @@ export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): R
                     />
                   </>
                 )}
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-ds-muted">
+                  {saveStatus === 'saving' && <><Loader2 className="h-3 w-3 animate-spin" /><span>{t('applying')}</span></>}
+                  {saveStatus === 'saved' && <><CheckCircle className="h-3 w-3 text-emerald-500" /><span className="text-emerald-600 dark:text-emerald-400">{t('applied')}</span></>}
+                  {saveStatus === 'error' && <><XCircle className="h-3 w-3 text-red-500" /><span className="text-red-600 dark:text-red-400">{t('applyFailed')}</span></>}
+                </div>
               </SettingsCard>
 
               <SettingsCard title={t('logTitle')} className="mt-6">

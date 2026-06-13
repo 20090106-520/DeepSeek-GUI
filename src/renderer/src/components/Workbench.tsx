@@ -490,6 +490,10 @@ export function Workbench(): ReactElement {
   })
 
   useEffect(() => {
+    void import('./AgnesGenerationPanel')
+  }, [])
+
+  useEffect(() => {
     const runDesktopShortcut = (command: DesktopCommand): void => {
       if (typeof window.dsGui?.runDesktopCommand !== 'function') return
       void window.dsGui.runDesktopCommand(command)

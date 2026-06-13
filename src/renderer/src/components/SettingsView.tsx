@@ -789,7 +789,8 @@ export function SettingsView(): ReactElement {
     resetClawWorkspaceToDefault,
     clawWorkspacePickerError,
     splitSettingsList,
-    listSettingsText
+    listSettingsText,
+    saveStatus
   }
 
   return (

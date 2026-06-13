@@ -1,4 +1,4 @@
-import { useState, type ReactElement, useCallback, useRef } from 'react'
+import { useState, type ReactElement, useCallback, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Download,
@@ -20,33 +20,6 @@ import {
 
 type GenerationType = 'image' | 'video' | 'edit' | 'understand'
 
-type ImageModel = 'agnes-image-2.0-flash' | 'agnes-image-2.1-flash' | 'agnes-image-3.0-flash'
-type VideoModel = 'agnes-video-2.0' | 'agnes-video-2.1'
-type EditModel = 'agnes-image-3.0-flash' | 'agnes-image-2.1-flash'
-type UnderstandModel = 'agnes-vision-2.0' | 'agnes-vision-2.1'
-
-type AnyModel = ImageModel | VideoModel | EditModel | UnderstandModel
-
-const IMAGE_MODELS: { id: ImageModel; name: string; desc: string }[] = [
-  { id: 'agnes-image-3.0-flash', name: 'Image 3.0 Flash', desc: '最新高清图像生成' },
-  { id: 'agnes-image-2.1-flash', name: 'Image 2.1 Flash', desc: '增强图像生成' },
-  { id: 'agnes-image-2.0-flash', name: 'Image 2.0 Flash', desc: '快速图像生成' }
-]
-
-const VIDEO_MODELS: { id: VideoModel; name: string; desc: string }[] = [
-  { id: 'agnes-video-2.1', name: 'Video 2.1', desc: '增强视频生成，支持音视频同步' },
-  { id: 'agnes-video-2.0', name: 'Video 2.0', desc: 'AI 视频生成' }
-]
-
-const EDIT_MODELS: { id: EditModel; name: string; desc: string }[] = [
-  { id: 'agnes-image-3.0-flash', name: 'Image 3.0 Flash', desc: '最佳图像编辑质量' },
-  { id: 'agnes-image-2.1-flash', name: 'Image 2.1 Flash', desc: '快速图像编辑' }
-]
-
-const UNDERSTAND_MODELS: { id: UnderstandModel; name: string; desc: string }[] = [
-  { id: 'agnes-vision-2.1', name: 'Vision 2.1', desc: '增强多模态理解' },
-  { id: 'agnes-vision-2.0', name: 'Vision 2.0', desc: '图片/视频理解分析' }
-]
 
 const GENERATION_TYPES: { id: GenerationType; icon: ReactElement; labelKey: string; color: string }[] = [
   { id: 'image', icon: <ImageIcon className="h-4 w-4" />, labelKey: 'agnesImage', color: 'from-violet-500 to-purple-500' },
@@ -59,34 +32,26 @@ interface AgnesGenerationPanelProps {
   onClose: () => void
 }
 
-function getDefaultModel(type: GenerationType): AnyModel {
-  switch (type) {
-    case 'image': return 'agnes-image-3.0-flash'
-    case 'video': return 'agnes-video-2.1'
-    case 'edit': return 'agnes-image-3.0-flash'
-    case 'understand': return 'agnes-vision-2.1'
-  }
-}
-
-function getModels(type: GenerationType) {
-  switch (type) {
-    case 'image': return IMAGE_MODELS
-    case 'video': return VIDEO_MODELS
-    case 'edit': return EDIT_MODELS
-    case 'understand': return UNDERSTAND_MODELS
-  }
-}
-
 function getHeaderGradient(type: GenerationType): string {
   const found = GENERATION_TYPES.find(g => g.id === type)
   return found?.color ?? 'from-purple-500 to-pink-500'
+}
+
+async function getSettingsModel(type: GenerationType): Promise<string> {
+  try {
+    const settings = await window.dsGui?.getSettings()
+    if (!settings?.agnesGeneration) return ''
+    if (type === 'image' || type === 'edit') return settings.agnesGeneration.imageModel || ''
+    if (type === 'video') return settings.agnesGeneration.videoModel || ''
+    return settings.agnesGeneration.imageModel || ''
+  } catch { return '' }
 }
 
 export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): ReactElement {
   const { t } = useTranslation()
   const [generationType, setGenerationType] = useState<GenerationType>('image')
   const [prompt, setPrompt] = useState('')
-  const [selectedModel, setSelectedModel] = useState<AnyModel>('agnes-image-3.0-flash')
+  const [selectedModel, setSelectedModel] = useState('')
   const [generating, setGenerating] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [uploadedImageName, setUploadedImageName] = useState('')
@@ -96,9 +61,13 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
   const [resultError, setResultError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  useEffect(() => {
+    void getSettingsModel(generationType).then((m) => { if (m) setSelectedModel(m) })
+  }, [])
+
   const handleTypeChange = useCallback((type: GenerationType) => {
     setGenerationType(type)
-    setSelectedModel(getDefaultModel(type))
+    void getSettingsModel(type).then((m) => setSelectedModel(m))
     setPrompt('')
     setUploadedImage(null)
     setUploadedImageName('')
@@ -177,7 +146,7 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
     }
   }, [handleGenerate])
 
-  const models = getModels(generationType)
+
   const needsImage = generationType === 'edit' || generationType === 'understand'
   const gradient = getHeaderGradient(generationType)
   const canSubmit = prompt.trim() && !generating && (!needsImage || !!uploadedImage)
@@ -253,28 +222,21 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
 
         {/* Content - scrollable */}
         <div className="flex-1 space-y-4 overflow-y-auto p-6">
-          {/* Model Selector */}
+          {/* Model Input */}
           <div>
             <label className="mb-2 block text-sm font-medium text-ds-ink">
               {t('agnesModel')}
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              {models.map((model) => (
-                <button
-                  key={model.id}
-                  type="button"
-                  onClick={() => setSelectedModel(model.id)}
-                  className={`rounded-lg border p-3 text-left transition ${
-                    selectedModel === model.id
-                      ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                      : 'border-ds-border bg-ds-subtle hover:border-ds-border/80'
-                  }`}
-                >
-                  <div className="text-sm font-medium text-ds-ink">{model.name}</div>
-                  <div className="mt-1 text-xs text-ds-muted">{model.desc}</div>
-                </button>
-              ))}
-            </div>
+            <input
+              type="text"
+              className="w-full rounded-xl border border-ds-border bg-ds-card px-4 py-2.5 text-sm text-ds-ink placeholder-ds-faint outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              placeholder={generationType === 'video' ? 'tencent/HunyuanVideo' : 'stabilityai/stable-diffusion-3-5-large'}
+            />
+            <p className="mt-1 text-xs text-ds-muted">
+              {t('agnesModelHint')}
+            </p>
           </div>
 
           {/* Image Upload for Edit / Understand */}
