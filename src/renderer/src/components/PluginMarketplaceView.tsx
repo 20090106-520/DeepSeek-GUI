@@ -36,7 +36,10 @@ import {
 
 type PluginKind = 'mcp' | 'skill'
 type PluginFilter = 'all' | 'recommended' | 'installed'
+type PluginSort = 'name' | 'popularity'
 type NoticeTone = 'success' | 'error' | 'info'
+
+type PluginCategory = 'browser' | 'search' | 'database' | 'devtools' | 'ai' | 'productivity' | 'coding'
 
 type Notice = MarketplaceNotice
 
@@ -53,6 +56,9 @@ type MarketplaceItem = {
   systemManaged?: boolean
   mcpConfig?: (workspaceRoot: string) => JsonRecord
   skillInstructions?: string
+  category?: PluginCategory
+  popularity?: number
+  tags?: string[]
 }
 
 type JsonRecord = Record<string, unknown>
@@ -351,7 +357,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginMcpGuiScheduleTitle',
     descriptionKey: 'pluginMcpGuiScheduleDesc',
     group: 'recommended',
-    systemManaged: true
+    systemManaged: true,
+    category: 'productivity',
+    popularity: 100
   },
   {
     id: 'filesystem',
@@ -359,6 +367,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginMcpFilesystemTitle',
     descriptionKey: 'pluginMcpFilesystemDesc',
     group: 'recommended',
+    category: 'devtools',
+    popularity: 95,
+    tags: ['files', 'io'],
     mcpConfig: (workspaceRoot) =>
       buildMcpConfig(
         'filesystem',
@@ -376,6 +387,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginMcpPlaywrightTitle',
     descriptionKey: 'pluginMcpPlaywrightDesc',
     group: 'recommended',
+    category: 'browser',
+    popularity: 90,
+    tags: ['automation', 'testing'],
     mcpConfig: () =>
       buildMcpConfig(
         'playwright',
@@ -389,6 +403,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginMcpGithubTitle',
     descriptionKey: 'pluginMcpGithubDesc',
     group: 'recommended',
+    category: 'devtools',
+    popularity: 88,
+    tags: ['git', 'api'],
     mcpConfig: () =>
       buildMcpConfig(
         'github',
@@ -402,6 +419,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginMcpContext7Title',
     descriptionKey: 'pluginMcpContext7Desc',
     group: 'recommended',
+    category: 'ai',
+    popularity: 82,
+    tags: ['context', 'docs'],
     mcpConfig: () =>
       buildMcpConfig(
         'context7',
@@ -415,6 +435,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginMcpComputerUseTitle',
     descriptionKey: 'pluginMcpComputerUseDesc',
     group: 'recommended',
+    category: 'browser',
+    popularity: 78,
+    tags: ['desktop', 'automation'],
     mcpConfig: () =>
       buildMcpConfig(
         'computer-use',
@@ -428,6 +451,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginMcpFetchTitle',
     descriptionKey: 'pluginMcpFetchDesc',
     group: 'recommended',
+    category: 'search',
+    popularity: 85,
+    tags: ['http', 'web'],
     mcpConfig: () =>
       buildMcpConfig(
         'fetch',
@@ -441,6 +467,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginMcpMemoryTitle',
     descriptionKey: 'pluginMcpMemoryDesc',
     group: 'recommended',
+    category: 'ai',
+    popularity: 75,
+    tags: ['knowledge', 'graph'],
     mcpConfig: () =>
       buildMcpConfig(
         'memory',
@@ -454,6 +483,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginMcpSequentialThinkingTitle',
     descriptionKey: 'pluginMcpSequentialThinkingDesc',
     group: 'recommended',
+    category: 'ai',
+    popularity: 72,
+    tags: ['reasoning', 'logic'],
     mcpConfig: () =>
       buildMcpConfig(
         'sequential-thinking',
@@ -467,6 +499,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginMcpSqliteTitle',
     descriptionKey: 'pluginMcpSqliteDesc',
     group: 'recommended',
+    category: 'database',
+    popularity: 70,
+    tags: ['sql', 'storage'],
     mcpConfig: () =>
       buildMcpConfig(
         'sqlite',
@@ -480,6 +515,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginMcpPuppeteerTitle',
     descriptionKey: 'pluginMcpPuppeteerDesc',
     group: 'recommended',
+    category: 'browser',
+    popularity: 68,
+    tags: ['scraping', 'automation'],
     mcpConfig: () =>
       buildMcpConfig(
         'puppeteer',
@@ -493,6 +531,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginMcpBraveSearchTitle',
     descriptionKey: 'pluginMcpBraveSearchDesc',
     group: 'recommended',
+    category: 'search',
+    popularity: 80,
+    tags: ['web', 'search'],
     mcpConfig: () =>
       buildMcpConfig(
         'brave-search',
@@ -506,6 +547,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginSkillReviewTitle',
     descriptionKey: 'pluginSkillReviewDesc',
     group: 'recommended',
+    category: 'coding',
+    popularity: 92,
+    tags: ['review', 'quality'],
     skillInstructions:
       'Use this skill when reviewing a code change. Prioritize correctness, regressions, security, performance, and missing tests. Lead with concrete findings and file references.'
   },
@@ -515,6 +559,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginSkillFrontendTitle',
     descriptionKey: 'pluginSkillFrontendDesc',
     group: 'recommended',
+    category: 'coding',
+    popularity: 86,
+    tags: ['ui', 'css'],
     skillInstructions:
       'Use this skill when improving UI. Preserve the product style, check responsive states, avoid generic layouts, and verify the result visually before handing it back.'
   },
@@ -524,6 +571,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginSkillBugTitle',
     descriptionKey: 'pluginSkillBugDesc',
     group: 'recommended',
+    category: 'coding',
+    popularity: 88,
+    tags: ['debug', 'fix'],
     skillInstructions:
       'Use this skill when investigating bugs. Reproduce or narrow the symptom, trace the data flow, identify the smallest fix, and add focused verification where possible.'
   },
@@ -533,6 +583,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginSkillReleaseTitle',
     descriptionKey: 'pluginSkillReleaseDesc',
     group: 'recommended',
+    category: 'productivity',
+    popularity: 70,
+    tags: ['changelog', 'docs'],
     skillInstructions:
       'Use this skill when preparing release notes. Group user-facing changes by outcome, call out migrations or risks, and keep wording concise and scannable.'
   },
@@ -542,6 +595,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginSkillDataAnalysisTitle',
     descriptionKey: 'pluginSkillDataAnalysisDesc',
     group: 'recommended',
+    category: 'ai',
+    popularity: 78,
+    tags: ['data', 'charts'],
     skillInstructions:
       'Use this skill when analyzing data. Read the data source first, compute summary statistics, identify patterns and outliers, and present findings with clear visualizations or tables.'
   },
@@ -551,6 +607,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginSkillApiDesignTitle',
     descriptionKey: 'pluginSkillApiDesignDesc',
     group: 'recommended',
+    category: 'coding',
+    popularity: 74,
+    tags: ['rest', 'schema'],
     skillInstructions:
       'Use this skill when designing or implementing APIs. Follow RESTful conventions, define clear request/response schemas, add proper error handling, and write endpoint documentation.'
   },
@@ -560,6 +619,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginSkillTestingTitle',
     descriptionKey: 'pluginSkillTestingDesc',
     group: 'recommended',
+    category: 'coding',
+    popularity: 76,
+    tags: ['test', 'qa'],
     skillInstructions:
       'Use this skill when writing tests. Cover happy paths and edge cases, use descriptive test names, follow the arrange-act-assert pattern, and ensure tests are deterministic and isolated.'
   },
@@ -569,6 +631,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginSkillDocWriterTitle',
     descriptionKey: 'pluginSkillDocWriterDesc',
     group: 'recommended',
+    category: 'productivity',
+    popularity: 72,
+    tags: ['docs', 'writing'],
     skillInstructions:
       'Use this skill when writing technical documentation. Structure content with clear headings, include code examples, explain the why not just the what, and keep language concise and precise.'
   },
@@ -578,6 +643,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginSkillRefactorTitle',
     descriptionKey: 'pluginSkillRefactorDesc',
     group: 'recommended',
+    category: 'coding',
+    popularity: 80,
+    tags: ['clean', 'improve'],
     skillInstructions:
       'Use this skill when refactoring code. Preserve existing behavior, make small incremental changes, run tests after each change, and improve readability without changing functionality.'
   },
@@ -587,6 +655,9 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     titleKey: 'pluginSkillSecurityTitle',
     descriptionKey: 'pluginSkillSecurityDesc',
     group: 'recommended',
+    category: 'coding',
+    popularity: 84,
+    tags: ['security', 'audit'],
     skillInstructions:
       'Use this skill when auditing code for security issues. Check for injection vulnerabilities, authentication flaws, data exposure, insecure defaults, and missing input validation.'
   }
@@ -598,6 +669,8 @@ export function PluginMarketplaceView(): ReactElement {
   const [activeKind, setActiveKind] = useState<PluginKind>('mcp')
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<PluginFilter>('all')
+  const [sort, setSort] = useState<PluginSort>('popularity')
+  const [categoryFilter, setCategoryFilter] = useState<PluginCategory | 'all'>('all')
   const [installed, setInstalled] = useState<string[]>(() => loadInstalledPlugins())
   const [busyId, setBusyId] = useState<string | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
@@ -813,18 +886,28 @@ export function PluginMarketplaceView(): ReactElement {
         const title = itemTitle(item, t).toLowerCase()
         const description = itemDescription(item, t).toLowerCase()
         const source = item.sourceLabel?.toLowerCase() ?? ''
+        const tags = (item.tags ?? []).join(' ').toLowerCase()
         return !normalizedQuery ||
           title.includes(normalizedQuery) ||
           description.includes(normalizedQuery) ||
           source.includes(normalizedQuery) ||
-          item.id.includes(normalizedQuery)
+          item.id.includes(normalizedQuery) ||
+          tags.includes(normalizedQuery)
       })
       .filter((item) => {
         if (filter === 'recommended') return item.group === 'recommended'
         if (filter === 'installed') return isInstalled(item)
         return true
       })
-  }, [activeKind, filter, isInstalled, marketplaceItems, query, t])
+      .filter((item) => {
+        if (categoryFilter === 'all') return true
+        return item.category === categoryFilter
+      })
+      .sort((a, b) => {
+        if (sort === 'popularity') return (b.popularity ?? 0) - (a.popularity ?? 0)
+        return itemTitle(a, t).localeCompare(itemTitle(b, t))
+      })
+  }, [activeKind, categoryFilter, filter, isInstalled, marketplaceItems, query, sort, t])
 
   const builtInItems = visibleItems.filter((item) => item.systemManaged)
   const recommendedItems = visibleItems.filter((item) => !item.systemManaged && !isInstalled(item))
@@ -1022,6 +1105,43 @@ export function PluginMarketplaceView(): ReactElement {
             </select>
             <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ds-faint" />
           </label>
+          <label className="relative w-full md:w-[148px]">
+            <select
+              value={sort}
+              onChange={(event) => setSort(event.target.value as PluginSort)}
+              className="h-11 w-full appearance-none rounded-2xl border border-ds-border bg-ds-card px-4 pr-9 text-[15px] font-medium text-ds-ink shadow-sm outline-none transition focus:border-accent/40 focus:ring-1 focus:ring-accent/30"
+            >
+              <option value="popularity">{t('pluginSortPopularity')}</option>
+              <option value="name">{t('pluginSortName')}</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ds-faint" />
+          </label>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {([
+            { id: 'all' as const, label: t('pluginCategoryAll') },
+            { id: 'browser' as const, label: t('pluginCategoryBrowser') },
+            { id: 'search' as const, label: t('pluginCategorySearch') },
+            { id: 'database' as const, label: t('pluginCategoryDatabase') },
+            { id: 'devtools' as const, label: t('pluginCategoryDevtools') },
+            { id: 'ai' as const, label: t('pluginCategoryAI') },
+            { id: 'productivity' as const, label: t('pluginCategoryProductivity') },
+            { id: 'coding' as const, label: t('pluginCategoryCoding') }
+          ]).map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setCategoryFilter(cat.id)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                categoryFilter === cat.id
+                  ? 'bg-purple-500 text-white shadow-sm'
+                  : 'bg-ds-subtle text-ds-muted hover:bg-ds-hover'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
         </div>
 
         {activeKind === 'skill' ? (
@@ -1304,7 +1424,7 @@ function PluginSection({
                 key={itemKey}
                 className="flex min-h-[92px] items-center gap-5 border-b border-ds-border-muted py-5"
               >
-                <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-[17px] font-semibold text-ds-ink">
                       {itemTitle(item, t)}
@@ -1316,10 +1436,24 @@ function PluginSection({
                         {item.sourceLabel}
                       </span>
                     ) : null}
+                    {item.popularity != null ? (
+                      <span className="shrink-0 text-[11px] text-ds-faint">
+                        ★ {item.popularity}
+                      </span>
+                    ) : null}
                   </div>
                   <p className="mt-1 line-clamp-2 text-[14px] leading-5 text-ds-muted">
                     {itemDescription(item, t)}
                   </p>
+                  {item.tags && item.tags.length > 0 ? (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {item.tags.map((tag) => (
+                        <span key={tag} className="rounded bg-ds-subtle px-1.5 py-0.5 text-[10px] text-ds-faint">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
                 <button
                   type="button"

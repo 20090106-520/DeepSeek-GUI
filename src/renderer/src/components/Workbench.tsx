@@ -106,6 +106,9 @@ const AgnesGenerationPanel = lazy(() =>
 const DramaStudioView = lazy(() =>
   import('./DramaStudioView').then((module) => ({ default: module.DramaStudioView }))
 )
+const WorkflowView = lazy(() =>
+  import('./WorkflowView').then((module) => ({ default: module.WorkflowView }))
+)
 
 type PendingSddPlanTarget = {
   planId: string
@@ -1460,17 +1463,26 @@ export function Workbench(): ReactElement {
     openDrama()
   }
 
+  const openWorkflowView = (): void => {
+    setConnectPhoneSidebarOpen(false)
+    setRoute('workflow')
+  }
+
   const toggleConnectPhone = (): void => {
     if (activeSddDraft) dismissActiveSddDraft({ closeAssistant: true })
     openClaw()
     setConnectPhoneSidebarOpen((open) => !open)
   }
 
-  const sidebarView: 'chat' | 'write' | 'claw' | 'schedule' =
+  const sidebarView: 'chat' | 'write' | 'claw' | 'schedule' | 'drama' | 'workflow' =
     route === 'claw' || (route === 'plugins' && pluginHostRoute === 'claw')
       ? 'claw'
       : route === 'schedule'
         ? 'schedule'
+      : route === 'drama'
+        ? 'drama'
+      : route === 'workflow'
+        ? 'workflow'
       : route === 'write'
         ? 'write'
         : 'chat'
@@ -1674,6 +1686,7 @@ export function Workbench(): ReactElement {
               onWriteOpen={openWriteMode}
               onScheduleOpen={openScheduleView}
               onDramaOpen={openDramaView}
+              onWorkflowOpen={openWorkflowView}
               onToggleSidebar={toggleLeftSidebar}
             />
             )}
@@ -1716,6 +1729,10 @@ export function Workbench(): ReactElement {
         ) : route === 'drama' ? (
           <Suspense fallback={<div className="h-full bg-ds-main" />}>
             <DramaStudioView />
+          </Suspense>
+        ) : route === 'workflow' ? (
+          <Suspense fallback={<div className="h-full bg-ds-main" />}>
+            <WorkflowView />
           </Suspense>
         ) : route === 'write' ? (
           <>

@@ -912,8 +912,20 @@ export function MessageBubble({ block, nested = false }: { block: ChatBlock; nes
     )
   }
   if (block.kind === 'reasoning') {
+    const lines = block.text.split('\n').filter((l: string) => l.trim())
+    const isLive = block.id === 'live-reasoning'
     return (
       <div className="ds-card-soft rounded-[20px] px-4 py-3 text-[13.5px] leading-6 text-ds-muted">
+        {isLive ? (
+          <div className="mb-2 flex items-center gap-2">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-purple-500" />
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">{t('thinkingSteps', { count: lines.length })}</span>
+          </div>
+        ) : lines.length > 1 ? (
+          <div className="mb-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-ds-faint">{t('thinkingSteps', { count: lines.length })}</span>
+          </div>
+        ) : null}
         <div className="ds-markdown">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{block.text}</ReactMarkdown>
         </div>
@@ -1049,6 +1061,7 @@ function ToolEntry({ block, nested = false }: { block: ToolBlock; nested?: boole
   const hasDetail = !!(block.detail && block.detail.trim().length > 0)
   const patchText = block.toolKind === 'file_change' ? extractUnifiedDiffText(block.detail) : undefined
   const canExpand = hasDetail || block.status === 'running'
+  const inputParams = block.meta?.input ? (typeof block.meta.input === 'string' ? block.meta.input : JSON.stringify(block.meta.input, null, 2)) : null
 
   return (
     <div className={`rounded-[22px] border shadow-[0_12px_30px_rgba(86,103,136,0.04)] ${tone}`}>
@@ -1113,6 +1126,14 @@ function ToolEntry({ block, nested = false }: { block: ToolBlock; nested?: boole
       </button>
       {effectiveOpen && hasDetail ? (
         <div className="ds-panel-strip min-w-0 border-t border-ds-border-muted/60 px-4 py-3">
+          {inputParams ? (
+            <div className="mb-2">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ds-muted opacity-70">{t('toolCallInput')}</p>
+              <pre className="max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-ds-main/50 p-2 font-mono text-[11px] leading-5 text-ds-ink">
+                {inputParams.length > 500 ? inputParams.slice(0, 500) + '...' : inputParams}
+              </pre>
+            </div>
+          ) : null}
           {patchText !== undefined ? (
             <DiffView patch={patchText} filePath={block.filePath} />
           ) : (
@@ -1120,6 +1141,13 @@ function ToolEntry({ block, nested = false }: { block: ToolBlock; nested?: boole
               {block.detail}
             </pre>
           )}
+        </div>
+      ) : null}
+      {effectiveOpen && block.status === 'running' ? (
+        <div className="border-t border-ds-border-muted/60 px-4 py-2">
+          <div className="h-1 w-full overflow-hidden rounded-full bg-amber-200 dark:bg-amber-800">
+            <div className="h-full w-1/3 animate-pulse rounded-full bg-gradient-to-r from-amber-400 to-amber-500" />
+          </div>
         </div>
       ) : null}
     </div>

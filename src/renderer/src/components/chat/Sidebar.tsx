@@ -8,7 +8,8 @@ import {
   LayoutGrid,
   Plus,
   Settings,
-  Smartphone
+  Smartphone,
+  Workflow
 } from 'lucide-react'
 import type { NormalizedThread } from '../../agent/types'
 import { useChatStore, type SettingsRouteSection } from '../../store/chat-store'
@@ -54,6 +55,7 @@ type Props = {
   onWriteOpen: () => void
   onScheduleOpen: () => void
   onDramaOpen: () => void
+  onWorkflowOpen: () => void
   onToggleSidebar: () => void
 }
 
@@ -83,6 +85,7 @@ export function Sidebar({
   onWriteOpen,
   onScheduleOpen,
   onDramaOpen,
+  onWorkflowOpen,
   onToggleSidebar
 }: Props): ReactElement {
   const { t, i18n } = useTranslation('common')
@@ -174,6 +177,12 @@ export function Sidebar({
           label={t('dramaStudio')}
           onClick={onDramaOpen}
           active={activeView === 'drama'}
+        />
+        <SidebarCommandRow
+          icon={<Workflow className="h-4 w-4" strokeWidth={1.75} />}
+          label={t('workflowTitle')}
+          onClick={onWorkflowOpen}
+          active={activeView === 'workflow'}
         />
       </div>
 
