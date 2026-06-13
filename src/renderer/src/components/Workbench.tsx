@@ -369,6 +369,7 @@ export function Workbench(): ReactElement {
   const [connectPhoneSidebarOpen, setConnectPhoneSidebarOpen] = useState(false)
   const [runtimeLogPath, setRuntimeLogPath] = useState('')
   const [agnesGenerationPanelOpen, setAgnesGenerationPanelOpen] = useState(false)
+  const [agnesGenerationInitialType, setAgnesGenerationInitialType] = useState<'image' | 'video' | 'edit' | 'understand' | undefined>(undefined)
   const writeAssistantOpen = useWriteWorkspaceStore((s) => s.assistantOpen)
   const setWriteAssistantOpen = useWriteWorkspaceStore((s) => s.setAssistantOpen)
   const writeAssistantModel = useWriteWorkspaceStore((s) => s.assistantModel)
@@ -1911,7 +1912,7 @@ export function Workbench(): ReactElement {
                   }
                   openSideConversationDraft()
                 }}
-                onAgnesGeneration={() => setAgnesGenerationPanelOpen(true)}
+                onAgnesGeneration={(type) => { setAgnesGenerationInitialType(type); setAgnesGenerationPanelOpen(true) }}
               />
             </div>
           </section>
@@ -1927,7 +1928,7 @@ export function Workbench(): ReactElement {
           {/* Agnes AI Generation Panel */}
           {agnesGenerationPanelOpen && (
             <Suspense fallback={null}>
-              <AgnesGenerationPanel onClose={() => setAgnesGenerationPanelOpen(false)} />
+               <AgnesGenerationPanel onClose={() => { setAgnesGenerationPanelOpen(false); setAgnesGenerationInitialType(undefined) }} initialType={agnesGenerationInitialType} />
             </Suspense>
           )}
         </div>

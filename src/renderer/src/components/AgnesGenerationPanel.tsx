@@ -41,6 +41,7 @@ const GENERATION_TYPES: { id: GenerationType; icon: ReactElement; labelKey: stri
 
 interface AgnesGenerationPanelProps {
   onClose: () => void
+  initialType?: GenerationType
 }
 
 function getHeaderGradient(type: GenerationType): string {
@@ -89,9 +90,9 @@ const STATUS_LABELS: Record<GenerationStatus, string> = {
   error: 'agnesStatusError'
 }
 
-export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): ReactElement {
+export function AgnesGenerationPanel({ onClose, initialType }: AgnesGenerationPanelProps): ReactElement {
   const { t } = useTranslation()
-  const [generationType, setGenerationType] = useState<GenerationType>('image')
+  const [generationType, setGenerationType] = useState<GenerationType>(initialType ?? 'image')
   const [prompt, setPrompt] = useState('')
   const [selectedModel, setSelectedModel] = useState('')
   const [selectedSize, setSelectedSize] = useState('1024x1024')

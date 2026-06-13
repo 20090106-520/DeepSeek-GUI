@@ -13,10 +13,12 @@ import {
 import {
   Archive,
   BarChart3,
+  Eye,
   FileEdit,
   FileText,
   GitFork,
   ImagePlus,
+  ImageIcon,
   ListTodo,
   Loader2,
   MessageCircleMore,
@@ -32,6 +34,7 @@ import {
   Square,
   Target,
   Trash2,
+  VideoIcon,
   X
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -150,7 +153,7 @@ type Props = {
    */
   onBtwCommand?: (seedText?: string) => void
   hideBtwCommand?: boolean
-  onAgnesGeneration?: () => void
+  onAgnesGeneration?: (type?: 'image' | 'video' | 'edit' | 'understand') => void
 }
 
 type SkillCommand = NonNullable<Props['skillCommands']>[number]
@@ -1390,12 +1393,30 @@ export function FloatingComposer({
               <>
                 <button
                   type="button"
-                  onClick={onAgnesGeneration}
+                  onClick={() => onAgnesGeneration()}
                   className="ds-no-drag flex h-8 w-full items-center gap-2 px-3 text-left transition hover:bg-ds-hover hover:text-ds-ink"
                 >
                   <Sparkles className="h-3.5 w-3.5 shrink-0 text-purple-500" strokeWidth={1.9} />
                   <span className="min-w-0 flex-1 truncate">{t('agnesAITools')}</span>
                 </button>
+                <div className="grid grid-cols-4 gap-0.5 px-1.5 pb-1">
+                  {([
+                    { type: 'image' as const, icon: <ImageIcon className="h-3 w-3" />, label: t('agnesImage'), color: 'text-violet-600 dark:text-violet-400' },
+                    { type: 'edit' as const, icon: <Pencil className="h-3 w-3" />, label: t('agnesEdit'), color: 'text-blue-600 dark:text-blue-400' },
+                    { type: 'video' as const, icon: <VideoIcon className="h-3 w-3" />, label: t('agnesVideo'), color: 'text-purple-600 dark:text-purple-400' },
+                    { type: 'understand' as const, icon: <Eye className="h-3 w-3" />, label: t('agnesUnderstand'), color: 'text-emerald-600 dark:text-emerald-400' }
+                  ]).map((item) => (
+                    <button
+                      key={item.type}
+                      type="button"
+                      onClick={() => onAgnesGeneration(item.type)}
+                      className={`ds-no-drag flex flex-col items-center gap-0.5 rounded-lg py-1.5 text-[10px] transition hover:bg-ds-hover ${item.color}`}
+                    >
+                      {item.icon}
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
                 <div className="my-1 h-px bg-ds-border-muted/70" />
               </>
             ) : null}
