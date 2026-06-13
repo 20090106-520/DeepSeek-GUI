@@ -419,7 +419,7 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
       buildMcpConfig(
         'computer-use',
         'npx',
-        ['-y', '@anthropic-ai/computer-use-mcp@latest']
+        ['-y', 'computer-use-mcp@latest']
       )
   },
   {
