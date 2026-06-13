@@ -381,24 +381,24 @@ async function checkGithubReleaseUpdate(
   }
   const [owner, repo] = githubRepo.split('/')
   try {
-    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/latest`, {
-      headers: { 'User-Agent': `deepseek-gui/${currentVersion}`, 'Accept': 'application/vnd.github+json' }
+    const res = await fetch(`https://github.com/${owner}/${repo}/releases/latest`, {
+      method: 'HEAD',
+      redirect: 'follow',
+      headers: { 'User-Agent': `deepseek-gui/${currentVersion}` }
     })
-    if (!res.ok) {
-      return { ok: false, currentVersion, code, message: `GitHub API returned ${res.status}.`, releaseUrl: downloadPageUrl(), channel }
+    const finalUrl = res.url || res.headers?.get('location') || ''
+    const tagMatch = finalUrl.match(/\/tag\/v?([\d.]+)$/i)
+    if (!tagMatch) {
+      return { ok: false, currentVersion, code, message: 'Could not determine latest version from redirect.', releaseUrl: downloadPageUrl(), channel }
     }
-    const data = await res.json() as { tag_name?: string; published_at?: string; html_url?: string }
-    const latestVersion = (data.tag_name ?? '').replace(/^v/i, '')
-    if (!latestVersion) {
-      return { ok: false, currentVersion, code, message: 'No version in GitHub release.', releaseUrl: downloadPageUrl(), channel }
-    }
+    const latestVersion = tagMatch[1]
     const info: Extract<GuiUpdateInfo, { ok: true }> = {
       ok: true,
       currentVersion,
       latestVersion,
       hasUpdate: isVersionGreater(latestVersion, currentVersion),
-      releaseUrl: data.html_url ?? releaseUrlForVersion(latestVersion),
-      releaseDate: data.published_at ?? '',
+      releaseUrl: finalUrl || releaseUrlForVersion(latestVersion),
+      releaseDate: '',
       channel,
       manualOnly: true,
       downloaded: false
@@ -407,7 +407,7 @@ async function checkGithubReleaseUpdate(
     emitGuiUpdateState(info.hasUpdate ? { status: 'available', info } : { status: 'not_available', info })
     return info
   } catch (e) {
-    return { ok: false, currentVersion, code, message: e instanceof Error ? e.message : String(e), releaseUrl: downloadPageUrl(), channel }
+    return { ok: false, currentVersion, code, message: `Network error: ${e instanceof Error ? e.message : String(e)}`, releaseUrl: downloadPageUrl(), channel }
   }
 }
 
@@ -564,13 +564,30 @@ export async function checkGuiUpdate(channel?: GuiUpdateChannel): Promise<GuiUpd
   } catch (e) {
     const githubResult = await checkGithubReleaseUpdate(selectedChannel, 'auto_updater_failed')
     if (githubResult.ok) return githubResult
+    const isNetworkError = /fetch failed|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|network|socket hang up/i.test(
+      (e instanceof Error ? e.message : String(e)) + (githubResult.message ?? '')
+    )
+    if (isNetworkError) {
+      const info: GuiUpdateInfo = {
+        ok: true,
+        currentVersion: app.getVersion(),
+        latestVersion: app.getVersion(),
+        hasUpdate: false,
+        releaseUrl: downloadPageUrl(),
+        releaseDate: '',
+        channel: selectedChannel,
+        manualOnly: true,
+        downloaded: false
+      }
+      lastInfo = info
+      emitGuiUpdateState({ status: 'not_available', info })
+      return info
+    }
     const rawMessage = sanitizeUpdaterError(e instanceof Error ? e.message : String(e), selectedChannel)
-    const fallbackHint = githubResult.message ? ` (GitHub fallback: ${githubResult.message})` : ''
-    const message = `${rawMessage}${fallbackHint}`
     const info: GuiUpdateInfo = {
       ok: false,
       currentVersion: app.getVersion(),
-      message,
+      message: rawMessage,
       code: 'unknown',
       releaseUrl: downloadPageUrl(),
       channel: selectedChannel
