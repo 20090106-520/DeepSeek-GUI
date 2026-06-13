@@ -95,6 +95,7 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
   const [prompt, setPrompt] = useState('')
   const [selectedModel, setSelectedModel] = useState('')
   const [selectedSize, setSelectedSize] = useState('1024x1024')
+  const [selectedDuration, setSelectedDuration] = useState('5s')
   const [generating, setGenerating] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [uploadedImageName, setUploadedImageName] = useState('')
@@ -202,11 +203,19 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
         }
       } else if (generationType === 'video') {
         setProgress({ status: 'submitting', percent: 10, message: t('agnesStatusSubmitting'), elapsed: 0 })
+        const durationMap: Record<string, { numFrames: number; frameRate: number }> = {
+          '3s': { numFrames: 73, frameRate: 24 },
+          '5s': { numFrames: 121, frameRate: 24 },
+          '8s': { numFrames: 193, frameRate: 24 },
+          '10s': { numFrames: 241, frameRate: 24 },
+          '15s': { numFrames: 361, frameRate: 24 }
+        }
+        const duration = durationMap[selectedDuration] ?? durationMap['5s']
         const videoPayload: Record<string, unknown> = {
           prompt,
           model,
-          numFrames: 121,
-          frameRate: 24
+          numFrames: duration.numFrames,
+          frameRate: duration.frameRate
         }
         if (uploadedImage) {
           videoPayload.image = uploadedImage
@@ -234,7 +243,7 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
       stopElapsedTimer()
       setPrompt('')
     }
-  }, [prompt, selectedModel, generationType, generating, uploadedImage, t, selectedSize, startElapsedTimer, stopElapsedTimer])
+  }, [prompt, selectedModel, generationType, generating, uploadedImage, t, selectedSize, selectedDuration, startElapsedTimer, stopElapsedTimer])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -404,6 +413,38 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Duration Selector for Video */}
+          {generationType === 'video' && (
+            <div>
+              <label className="mb-2 block text-sm font-medium text-ds-ink">
+                {t('agnesDuration')}
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: '3s', numFrames: 73, frameRate: 24 },
+                  { label: '5s', numFrames: 121, frameRate: 24 },
+                  { label: '8s', numFrames: 193, frameRate: 24 },
+                  { label: '10s', numFrames: 241, frameRate: 24 },
+                  { label: '15s', numFrames: 361, frameRate: 24 }
+                ].map((d) => (
+                  <button
+                    key={d.label}
+                    type="button"
+                    onClick={() => setSelectedDuration(d.label)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                      selectedDuration === d.label
+                        ? 'bg-purple-500 text-white shadow-sm'
+                        : 'bg-ds-subtle text-ds-muted hover:bg-ds-hover'
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-ds-muted">{t('agnesDurationHint')}</p>
             </div>
           )}
 

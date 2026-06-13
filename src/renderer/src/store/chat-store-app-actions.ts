@@ -112,6 +112,10 @@ export function createAppActions(options: CreateAppActionsOptions): Pick<
       set({ route: 'schedule' })
     },
 
+    openDrama: () => {
+      set({ route: 'drama' })
+    },
+
     openInitialSetup: (mode: InitialSetupMode = 'required') =>
       set({ initialSetupOpen: true, initialSetupMode: mode }),
 

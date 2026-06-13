@@ -423,6 +423,84 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
       )
   },
   {
+    id: 'fetch',
+    kind: 'mcp',
+    titleKey: 'pluginMcpFetchTitle',
+    descriptionKey: 'pluginMcpFetchDesc',
+    group: 'recommended',
+    mcpConfig: () =>
+      buildMcpConfig(
+        'fetch',
+        'npx',
+        ['-y', '@modelcontextprotocol/server-fetch']
+      )
+  },
+  {
+    id: 'memory',
+    kind: 'mcp',
+    titleKey: 'pluginMcpMemoryTitle',
+    descriptionKey: 'pluginMcpMemoryDesc',
+    group: 'recommended',
+    mcpConfig: () =>
+      buildMcpConfig(
+        'memory',
+        'npx',
+        ['-y', '@modelcontextprotocol/server-memory']
+      )
+  },
+  {
+    id: 'sequential-thinking',
+    kind: 'mcp',
+    titleKey: 'pluginMcpSequentialThinkingTitle',
+    descriptionKey: 'pluginMcpSequentialThinkingDesc',
+    group: 'recommended',
+    mcpConfig: () =>
+      buildMcpConfig(
+        'sequential-thinking',
+        'npx',
+        ['-y', '@modelcontextprotocol/server-sequential-thinking']
+      )
+  },
+  {
+    id: 'sqlite',
+    kind: 'mcp',
+    titleKey: 'pluginMcpSqliteTitle',
+    descriptionKey: 'pluginMcpSqliteDesc',
+    group: 'recommended',
+    mcpConfig: () =>
+      buildMcpConfig(
+        'sqlite',
+        'npx',
+        ['-y', '@modelcontextprotocol/server-sqlite']
+      )
+  },
+  {
+    id: 'puppeteer',
+    kind: 'mcp',
+    titleKey: 'pluginMcpPuppeteerTitle',
+    descriptionKey: 'pluginMcpPuppeteerDesc',
+    group: 'recommended',
+    mcpConfig: () =>
+      buildMcpConfig(
+        'puppeteer',
+        'npx',
+        ['-y', '@modelcontextprotocol/server-puppeteer']
+      )
+  },
+  {
+    id: 'brave-search',
+    kind: 'mcp',
+    titleKey: 'pluginMcpBraveSearchTitle',
+    descriptionKey: 'pluginMcpBraveSearchDesc',
+    group: 'recommended',
+    mcpConfig: () =>
+      buildMcpConfig(
+        'brave-search',
+        'npx',
+        ['-y', '@modelcontextprotocol/server-brave-search']
+      )
+  },
+  {
     id: 'code-review',
     kind: 'skill',
     titleKey: 'pluginSkillReviewTitle',
@@ -457,6 +535,60 @@ const RECOMMENDED_ITEMS: MarketplaceItem[] = [
     group: 'recommended',
     skillInstructions:
       'Use this skill when preparing release notes. Group user-facing changes by outcome, call out migrations or risks, and keep wording concise and scannable.'
+  },
+  {
+    id: 'data-analysis',
+    kind: 'skill',
+    titleKey: 'pluginSkillDataAnalysisTitle',
+    descriptionKey: 'pluginSkillDataAnalysisDesc',
+    group: 'recommended',
+    skillInstructions:
+      'Use this skill when analyzing data. Read the data source first, compute summary statistics, identify patterns and outliers, and present findings with clear visualizations or tables.'
+  },
+  {
+    id: 'api-design',
+    kind: 'skill',
+    titleKey: 'pluginSkillApiDesignTitle',
+    descriptionKey: 'pluginSkillApiDesignDesc',
+    group: 'recommended',
+    skillInstructions:
+      'Use this skill when designing or implementing APIs. Follow RESTful conventions, define clear request/response schemas, add proper error handling, and write endpoint documentation.'
+  },
+  {
+    id: 'testing-guide',
+    kind: 'skill',
+    titleKey: 'pluginSkillTestingTitle',
+    descriptionKey: 'pluginSkillTestingDesc',
+    group: 'recommended',
+    skillInstructions:
+      'Use this skill when writing tests. Cover happy paths and edge cases, use descriptive test names, follow the arrange-act-assert pattern, and ensure tests are deterministic and isolated.'
+  },
+  {
+    id: 'doc-writer',
+    kind: 'skill',
+    titleKey: 'pluginSkillDocWriterTitle',
+    descriptionKey: 'pluginSkillDocWriterDesc',
+    group: 'recommended',
+    skillInstructions:
+      'Use this skill when writing technical documentation. Structure content with clear headings, include code examples, explain the why not just the what, and keep language concise and precise.'
+  },
+  {
+    id: 'refactor',
+    kind: 'skill',
+    titleKey: 'pluginSkillRefactorTitle',
+    descriptionKey: 'pluginSkillRefactorDesc',
+    group: 'recommended',
+    skillInstructions:
+      'Use this skill when refactoring code. Preserve existing behavior, make small incremental changes, run tests after each change, and improve readability without changing functionality.'
+  },
+  {
+    id: 'security-audit',
+    kind: 'skill',
+    titleKey: 'pluginSkillSecurityTitle',
+    descriptionKey: 'pluginSkillSecurityDesc',
+    group: 'recommended',
+    skillInstructions:
+      'Use this skill when auditing code for security issues. Check for injection vulnerabilities, authentication flaws, data exposure, insecure defaults, and missing input validation.'
   }
 ]
 

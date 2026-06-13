@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Clock3,
+  Clapperboard,
   FileQuestion,
   LayoutGrid,
   Plus,
@@ -30,7 +31,7 @@ import {
 type Props = {
   threads: NormalizedThread[]
   activeThreadId: string | null
-  activeView: 'chat' | 'write' | 'claw' | 'schedule'
+  activeView: 'chat' | 'write' | 'claw' | 'schedule' | 'drama'
   connectPhoneSidebarOpen: boolean
   pluginsActive: boolean
   runtimeReady: boolean
@@ -52,6 +53,7 @@ type Props = {
   onCodeOpen: () => void
   onWriteOpen: () => void
   onScheduleOpen: () => void
+  onDramaOpen: () => void
   onToggleSidebar: () => void
 }
 
@@ -80,6 +82,7 @@ export function Sidebar({
   onCodeOpen,
   onWriteOpen,
   onScheduleOpen,
+  onDramaOpen,
   onToggleSidebar
 }: Props): ReactElement {
   const { t, i18n } = useTranslation('common')
@@ -165,6 +168,12 @@ export function Sidebar({
           label={t('schedule')}
           onClick={onScheduleOpen}
           active={activeView === 'schedule'}
+        />
+        <SidebarCommandRow
+          icon={<Clapperboard className="h-4 w-4" strokeWidth={1.75} />}
+          label={t('dramaStudio')}
+          onClick={onDramaOpen}
+          active={activeView === 'drama'}
         />
       </div>
 

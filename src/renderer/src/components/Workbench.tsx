@@ -103,6 +103,9 @@ const ScheduleTasksView = lazy(() =>
 const AgnesGenerationPanel = lazy(() =>
   import('./AgnesGenerationPanel').then((module) => ({ default: module.AgnesGenerationPanel }))
 )
+const DramaStudioView = lazy(() =>
+  import('./DramaStudioView').then((module) => ({ default: module.DramaStudioView }))
+)
 
 type PendingSddPlanTarget = {
   planId: string
@@ -255,6 +258,7 @@ export function Workbench(): ReactElement {
     openPlugins,
     openClaw,
     openSchedule,
+    openDrama,
     chooseWorkspace,
     clawChannels,
     activeClawChannelId,
@@ -311,6 +315,7 @@ export function Workbench(): ReactElement {
       openPlugins: s.openPlugins,
       openClaw: s.openClaw,
       openSchedule: s.openSchedule,
+      openDrama: s.openDrama,
       chooseWorkspace: s.chooseWorkspace,
       clawChannels: s.clawChannels,
       activeClawChannelId: s.activeClawChannelId,
@@ -1450,6 +1455,11 @@ export function Workbench(): ReactElement {
     openSchedule()
   }
 
+  const openDramaView = (): void => {
+    setConnectPhoneSidebarOpen(false)
+    openDrama()
+  }
+
   const toggleConnectPhone = (): void => {
     if (activeSddDraft) dismissActiveSddDraft({ closeAssistant: true })
     openClaw()
@@ -1663,6 +1673,7 @@ export function Workbench(): ReactElement {
               onCodeOpen={openCodeMode}
               onWriteOpen={openWriteMode}
               onScheduleOpen={openScheduleView}
+              onDramaOpen={openDramaView}
               onToggleSidebar={toggleLeftSidebar}
             />
             )}
@@ -1701,6 +1712,10 @@ export function Workbench(): ReactElement {
               onToggleLeftSidebar={toggleLeftSidebar}
               onOpenThread={openThread}
             />
+          </Suspense>
+        ) : route === 'drama' ? (
+          <Suspense fallback={<div className="h-full bg-ds-main" />}>
+            <DramaStudioView />
           </Suspense>
         ) : route === 'write' ? (
           <>
