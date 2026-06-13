@@ -650,11 +650,11 @@ async function ensureKunRuntime(settings: AppSettingsV1): Promise<void> {
 
 function createSplashWindow(): BrowserWindow {
   const splash = new BrowserWindow({
-    width: 420,
-    height: 320,
+    width: 520,
+    height: 400,
     frame: false,
     transparent: false,
-    backgroundColor: '#0a0e1a',
+    backgroundColor: '#0c0a1a',
     resizable: false,
     show: false,
     alwaysOnTop: true,

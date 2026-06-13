@@ -17,7 +17,8 @@ export default defineConfig({
   main: {
     plugins: [
       externalizeDepsPlugin(),
-      copyStaticFile(resolve('src/main/public/splash.html'), 'splash.html')
+      copyStaticFile(resolve('src/main/public/splash.html'), 'splash.html'),
+      copyStaticFile(resolve('src/main/public/gsap.min.js'), 'gsap.min.js')
     ],
     build: {
       rollupOptions: {
