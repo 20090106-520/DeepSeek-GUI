@@ -1,7 +1,7 @@
 {
   "name": "deepseek-gui",
   "productName": "DeepSeek GUI",
-  "version": "0.2.55",
+  "version": "0.2.56",
   "description": "Electron workbench for the Kun runtime (HTTP/SSE)",
   "main": "./out/main/index.cjs",
   "type": "module",
