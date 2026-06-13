@@ -1,9 +1,9 @@
 {
   "name": "deepseek-gui",
   "productName": "DeepSeek GUI",
-  "version": "0.2.47",
+  "version": "0.2.48",
   "description": "Electron workbench for the Kun runtime (HTTP/SSE)",
-  "main": "./out/main/index.js",
+  "main": "./out/main/index.cjs",
   "type": "module",
   "scripts": {
     "dev": "npm run build:kun && electron-vite dev",
@@ -12,6 +12,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "dist": "npm run build && npx --yes electron-builder@26.8.1 --config electron-builder.config.cjs --publish never",
     "dist:mac": "rm -f dist/DeepSeek-GUI-*-mac-* dist/latest-mac.yml && npm run build && npm run dist:mac:x64:dmg && npm run dist:mac:x64:zip && npm run dist:mac:arm64:dmg && npm run dist:mac:arm64:zip && node ./scripts/generate-mac-latest.cjs dist",
     "dist:mac:signed": "rm -f dist/DeepSeek-GUI-*-mac-* dist/latest-mac.yml && MAC_SIGN=1 npm run dist:mac:x64 && MAC_SIGN=1 npm run dist:mac:arm64 && node ./scripts/generate-mac-latest.cjs dist",
@@ -67,6 +69,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.60.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/html-to-docx": "^1.8.1",
     "@types/react": "^19.0.10",
@@ -78,6 +81,7 @@
     "eslint": "^10.4.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.6.0",
+    "playwright": "^1.60.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.2",
