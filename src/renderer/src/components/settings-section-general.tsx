@@ -276,6 +276,36 @@ export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): R
                   }
                 />
                 <SettingRow
+                  title={t('themePresets')}
+                  description={t('themePresetsDesc')}
+                  control={
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        { id: 'ocean', theme: 'dark' as const, accent: 'cyan' as const, label: t('themePresetOcean'), bg: 'bg-cyan-900', dot: '#06b6d4' },
+                        { id: 'aurora', theme: 'dark' as const, accent: 'green' as const, label: t('themePresetAurora'), bg: 'bg-emerald-900', dot: '#22c55e' },
+                        { id: 'sunset', theme: 'light' as const, accent: 'orange' as const, label: t('themePresetSunset'), bg: 'bg-orange-200', dot: '#f97316' },
+                        { id: 'sakura', theme: 'light' as const, accent: 'pink' as const, label: t('themePresetSakura'), bg: 'bg-pink-200', dot: '#ec4899' },
+                        { id: 'midnight', theme: 'dark' as const, accent: 'purple' as const, label: t('themePresetMidnight'), bg: 'bg-purple-900', dot: '#8b5cf6' },
+                        { id: 'classic', theme: 'light' as const, accent: 'blue' as const, label: t('themePresetClassic'), bg: 'bg-blue-200', dot: '#3b82f6' }
+                      ]).map((preset) => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => update({ theme: preset.theme, accentColor: preset.accent })}
+                          className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
+                            form.theme === preset.theme && form.accentColor === preset.accent
+                              ? 'border-ds-accent bg-ds-accent/10 text-ds-ink'
+                              : 'border-ds-border bg-ds-card text-ds-muted hover:bg-ds-hover'
+                          }`}
+                        >
+                          <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: preset.dot }} />
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  }
+                />
+                <SettingRow
                   title={t('onboardingPreview')}
                   description={t('onboardingPreviewDesc')}
                   control={
@@ -307,6 +337,41 @@ export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): R
                       <option value="large">{t('fontScaleLarge')}</option>
                       <option value="extraLarge">{t('fontScaleExtraLarge')}</option>
                     </select>
+                  }
+                />
+                <SettingRow
+                  title={t('uiZoom')}
+                  description={t('uiZoomDesc')}
+                  control={
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-ds-muted">80%</span>
+                      <input
+                        type="range"
+                        min="80"
+                        max="150"
+                        step="5"
+                        value={(() => {
+                          const scale = form.uiFontScale
+                          if (scale === 'extraSmall') return 75
+                          if (scale === 'small') return 82
+                          if (scale === 'large') return 100
+                          if (scale === 'extraLarge') return 110
+                          return 88
+                        })()}
+                        onChange={(e) => {
+                          const val = Number(e.target.value)
+                          let newScale: AppSettingsV1['uiFontScale']
+                          if (val <= 78) newScale = 'extraSmall'
+                          else if (val <= 90) newScale = 'small'
+                          else if (val <= 105) newScale = 'medium'
+                          else if (val <= 120) newScale = 'large'
+                          else newScale = 'extraLarge'
+                          update({ uiFontScale: newScale })
+                        }}
+                        className="h-1.5 w-24 cursor-pointer appearance-none rounded-full bg-ds-border accent-ds-accent"
+                      />
+                      <span className="text-[11px] text-ds-muted">150%</span>
+                    </div>
                   }
                 />
                 <SettingRow
