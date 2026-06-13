@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useTranslation } from 'react-i18next'
-import { Check, ChevronDown, ChevronRight, Copy, FileEdit, ImageIcon, Loader2, MessageSquareQuote, PencilLine, Terminal, Wrench } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, Copy, FileEdit, ImageIcon, Loader2, MessageSquareQuote, PencilLine, ShieldAlert, Terminal, Wrench } from 'lucide-react'
 import type { AttachmentReference, ChatBlock, RuntimeDisclosureMetadata, ToolBlock, UserInputAnswer, UserInputQuestion } from '../../agent/types'
 import { extractUnifiedDiffText } from '../../lib/diff-stats'
 import { useChatStore } from '../../store/chat-store'
@@ -724,7 +724,22 @@ function UserInputBubble({
                 <div className="mt-3 grid gap-2">
                   {question.options.map((option) => {
                     const selected = answer?.label === option.label && answer.value === option.label
-                    return (
+  const isComputerUse = block.summary?.toLowerCase().includes('screenshot') ||
+    block.summary?.toLowerCase().includes('mouse') ||
+    block.summary?.toLowerCase().includes('keyboard') ||
+    block.summary?.toLowerCase().includes('computer') ||
+    (typeof block.meta?.input === 'string' && (
+      (block.meta.input as string).includes('screenshot') ||
+      (block.meta.input as string).includes('mouse') ||
+      (block.meta.input as string).includes('keyboard')
+    )) ||
+    (typeof block.meta?.input === 'object' && block.meta.input !== null && (
+      JSON.stringify(block.meta.input).includes('screenshot') ||
+      JSON.stringify(block.meta.input).includes('mouse') ||
+      JSON.stringify(block.meta.input).includes('keyboard')
+    ))
+
+  return (
                       <button
                         key={option.label}
                         type="button"
@@ -1126,6 +1141,12 @@ function ToolEntry({ block, nested = false }: { block: ToolBlock; nested?: boole
       </button>
       {effectiveOpen && hasDetail ? (
         <div className="ds-panel-strip min-w-0 border-t border-ds-border-muted/60 px-4 py-3">
+          {isComputerUse ? (
+            <div className="mb-3 flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
+              <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+              <span>{t('computerUseToolWarning')}</span>
+            </div>
+          ) : null}
           {inputParams ? (
             <div className="mb-2">
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ds-muted opacity-70">{t('toolCallInput')}</p>
