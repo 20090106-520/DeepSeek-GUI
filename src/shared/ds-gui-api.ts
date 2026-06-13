@@ -327,8 +327,15 @@ export type AgnesImageGenerationResult =
 export type AgnesVideoGenerationPayload = {
   prompt: string
   model?: string
-  duration?: number
-  aspectRatio?: string
+  image?: string | string[]
+  width?: number
+  height?: number
+  numFrames?: number
+  frameRate?: number
+  negativePrompt?: string
+  seed?: number
+  extraBodyImage?: string[]
+  extraBodyMode?: string
 }
 
 export type AgnesVideoGenerationResult =

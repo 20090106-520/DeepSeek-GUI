@@ -117,12 +117,16 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
           setResultError(result.message)
         }
       } else if (generationType === 'video') {
-        const result = await dsGui.agnesGenerateVideo({
+        const videoPayload: Record<string, unknown> = {
           prompt,
           model,
-          duration: 10,
-          aspectRatio: '16:9'
-        })
+          numFrames: 121,
+          frameRate: 24
+        }
+        if (uploadedImage) {
+          videoPayload.image = uploadedImage
+        }
+        const result = await dsGui.agnesGenerateVideo(videoPayload as any)
 
         if (result.ok) {
           setResultVideoUrl(result.videoUrl)
@@ -149,9 +153,9 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
   }, [handleGenerate])
 
 
-  const needsImage = generationType === 'edit' || generationType === 'understand'
+  const needsImage = generationType === 'edit' || generationType === 'understand' || generationType === 'video'
   const gradient = getHeaderGradient(generationType)
-  const canSubmit = prompt.trim() && !generating && (!needsImage || !!uploadedImage)
+  const canSubmit = prompt.trim() && !generating && ((generationType === 'edit' || generationType === 'understand') ? !!uploadedImage : true)
 
   const getPlaceholder = (): string => {
     switch (generationType) {
@@ -270,7 +274,9 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
           {needsImage && (
             <div>
               <label className="mb-2 block text-sm font-medium text-ds-ink">
-                {generationType === 'edit' ? t('agnesUploadImageToEdit') : t('agnesUploadImageToUnderstand')}
+                {generationType === 'edit' ? t('agnesUploadImageToEdit') :
+                 generationType === 'video' ? t('agnesUploadImageForVideo') :
+                 t('agnesUploadImageToUnderstand')}
               </label>
               <input
                 ref={fileInputRef}

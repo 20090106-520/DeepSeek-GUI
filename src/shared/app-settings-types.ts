@@ -463,7 +463,7 @@ export const DEFAULT_AGNES_GENERATION_PROVIDER: AgnesGenerationProviderV1 = {
   baseUrl: 'https://apihub.agnes-ai.com',
   apiKey: '',
   imageModel: 'agnes-image-2.1-flash',
-  videoModel: 'tencent/HunyuanVideo'
+  videoModel: 'agnes-video-v2.0'
 }
 
 export type GuiUpdateConfigV1 = {

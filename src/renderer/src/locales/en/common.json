@@ -71,6 +71,7 @@
   "agnesGenerating": "Generating...",
   "agnesUploadImageToEdit": "Upload image to edit",
   "agnesUploadImageToUnderstand": "Upload image or video to understand",
+  "agnesUploadImageForVideo": "Upload reference image (optional, for image-to-video)",
   "agnesClickToUpload": "Click to upload image or video",
   "agnesSupportedFormats": "Supports JPG, PNG, GIF, MP4, WebM formats",
   "agnesImageUploaded": "Uploaded",

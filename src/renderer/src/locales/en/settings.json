@@ -604,5 +604,5 @@
   "agnesGenerationImageModel": "Image Generation Model",
   "agnesGenerationImageModelDesc": "The model ID used for image generation. Defaults to agnes-image-2.1-flash, supporting text-to-image and image-to-image.",
   "agnesGenerationVideoModel": "Video Generation Model",
-  "agnesGenerationVideoModelDesc": "The model ID used for video generation, depends on your API service."
+  "agnesGenerationVideoModelDesc": "The model ID used for video generation. Defaults to agnes-video-v2.0, supporting text-to-video and image-to-video (async task mode)."
 }

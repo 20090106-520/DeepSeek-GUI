@@ -71,6 +71,7 @@
   "agnesGenerating": "生成中...",
   "agnesUploadImageToEdit": "上传需要编辑的图片",
   "agnesUploadImageToUnderstand": "上传需要理解的图片或视频",
+  "agnesUploadImageForVideo": "上传参考图片（可选，图生视频）",
   "agnesClickToUpload": "点击上传图片或视频",
   "agnesSupportedFormats": "支持 JPG、PNG、GIF、MP4、WebM 格式",
   "agnesImageUploaded": "已上传",

@@ -604,5 +604,5 @@
   "agnesGenerationImageModel": "图像生成模型",
   "agnesGenerationImageModelDesc": "图像生成使用的模型 ID，默认 agnes-image-2.1-flash，支持文生图和图生图。",
   "agnesGenerationVideoModel": "视频生成模型",
-  "agnesGenerationVideoModelDesc": "视频生成使用的模型 ID，取决于你选择的 API 服务。"
+  "agnesGenerationVideoModelDesc": "视频生成使用的模型 ID，默认 agnes-video-v2.0，支持文生视频和图生视频（异步任务模式）。"
 }

@@ -888,8 +888,15 @@ export function registerAppIpcHandlers(options: RegisterAppIpcHandlersOptions): 
     const request = parseIpcPayload('agnes:generate-video', z.object({
       prompt: z.string().min(1).max(MAX_BODY_BYTES),
       model: z.string().max(256).optional(),
-      duration: z.number().int().min(5).max(60).optional(),
-      aspectRatio: z.string().max(16).optional()
+      image: z.union([z.string(), z.array(z.string())]).optional(),
+      width: z.number().int().min(256).max(4096).optional(),
+      height: z.number().int().min(256).max(4096).optional(),
+      numFrames: z.number().int().min(9).max(441).optional(),
+      frameRate: z.number().min(1).max(60).optional(),
+      negativePrompt: z.string().max(MAX_BODY_BYTES).optional(),
+      seed: z.number().int().optional(),
+      extraBodyImage: z.array(z.string()).optional(),
+      extraBodyMode: z.string().max(64).optional()
     }).strict(), payload)
     const settings = await store.load()
     const agnes = settings.agnesGeneration
@@ -899,27 +906,70 @@ export function registerAppIpcHandlers(options: RegisterAppIpcHandlersOptions): 
     try {
       const baseUrl = agnes.baseUrl.replace(/\/+$/, '')
       const model = request.model || agnes.videoModel
-      const res = await fetch(`${baseUrl}/video/generations`, {
+      const body: Record<string, unknown> = {
+        model,
+        prompt: request.prompt
+      }
+      if (request.image) body.image = request.image
+      if (request.width) body.width = request.width
+      if (request.height) body.height = request.height
+      if (request.numFrames) body.num_frames = request.numFrames
+      if (request.frameRate) body.frame_rate = request.frameRate
+      if (request.negativePrompt) body.negative_prompt = request.negativePrompt
+      if (request.seed !== undefined) body.seed = request.seed
+      const extraBody: Record<string, unknown> = {}
+      if (request.extraBodyImage) extraBody.image = request.extraBodyImage
+      if (request.extraBodyMode) extraBody.mode = request.extraBodyMode
+      if (Object.keys(extraBody).length > 0) body.extra_body = extraBody
+
+      const createRes = await fetch(`${baseUrl}/v1/videos`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${agnes.apiKey.trim()}`
         },
-        body: JSON.stringify({
-          model,
-          prompt: request.prompt,
-          duration: request.duration,
-          aspect_ratio: request.aspectRatio
-        })
+        body: JSON.stringify(body)
       })
-      if (!res.ok) {
-        const text = await res.text()
-        return { ok: false, message: `API error ${res.status}: ${text.slice(0, 500)}` }
+      if (!createRes.ok) {
+        const text = await createRes.text()
+        return { ok: false, message: `API error ${createRes.status}: ${text.slice(0, 500)}` }
       }
-      const data = await res.json() as { data?: Array<{ url?: string; thumbnail_url?: string }> }
-      const item = data.data?.[0]
-      if (!item) return { ok: false, message: 'No video data in response' }
-      return { ok: true, videoUrl: item.url ?? '', thumbnailUrl: item.thumbnail_url }
+      const createData = await createRes.json() as {
+        video_id?: string
+        task_id?: string
+        status?: string
+      }
+      const videoId = createData.video_id
+      if (!videoId) {
+        return { ok: false, message: 'No video_id in create response' }
+      }
+
+      const pollInterval = 5000
+      const maxPolls = 72
+      for (let i = 0; i < maxPolls; i++) {
+        await new Promise((r) => setTimeout(r, pollInterval))
+        const pollRes = await fetch(
+          `${baseUrl}/agnesapi?video_id=${encodeURIComponent(videoId)}`,
+          {
+            headers: { 'Authorization': `Bearer ${agnes.apiKey.trim()}` }
+          }
+        )
+        if (!pollRes.ok) continue
+        const pollData = await pollRes.json() as {
+          status?: string
+          progress?: number
+          remixed_from_video_id?: string
+          error?: string | { message?: string }
+        }
+        if (pollData.status === 'completed' && pollData.remixed_from_video_id) {
+          return { ok: true, videoUrl: pollData.remixed_from_video_id, thumbnailUrl: '' }
+        }
+        if (pollData.status === 'failed') {
+          const errMsg = typeof pollData.error === 'object' ? pollData.error?.message : pollData.error
+          return { ok: false, message: `Video generation failed: ${errMsg ?? 'unknown error'}` }
+        }
+      }
+      return { ok: false, message: 'Video generation timed out (6 minutes)' }
     } catch (e) {
       return { ok: false, message: e instanceof Error ? e.message : String(e) }
     }
