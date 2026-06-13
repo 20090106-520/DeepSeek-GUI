@@ -23,11 +23,21 @@ export class AppErrorBoundary extends Component<Props, State> {
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('[AppErrorBoundary] uncaught render error:', error, info.componentStack)
-
+    
     globalErrorHandler.captureError(error, {
       componentStack: info.componentStack,
       retryCount: this.retryCount
     })
+
+    if (typeof window !== 'undefined' && typeof window.dsGui?.logError === 'function') {
+      void window.dsGui.logError('renderer', 'Uncaught render error', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        componentStack: info.componentStack,
+        retryCount: this.retryCount
+      }).catch(() => undefined)
+    }
   }
 
   private handleReload = (): void => {
@@ -59,9 +69,6 @@ export class AppErrorBoundary extends Component<Props, State> {
           <p className="mt-2 text-[13px] leading-5 text-amber-800/80 dark:text-amber-100/80">
             {this.state.error.message || String(this.state.error)}
           </p>
-          {this.state.error.stack && (
-            <pre className="mt-2 max-h-40 overflow-auto rounded bg-amber-100/50 p-2 text-[11px] text-left text-amber-900/70 dark:bg-amber-900/30 dark:text-amber-100/70 whitespace-pre-wrap break-all">{this.state.error.stack}</pre>
-          )}
           {errorContext?.category && (
             <p className="mt-1 text-[12px] text-amber-700/70 dark:text-amber-200/70">
               {i18n.t(`errorCategory${errorContext.category.charAt(0).toUpperCase() + errorContext.category.slice(1)}`)}
