@@ -487,6 +487,8 @@ const settingsPatchObjectSchema = z.object({
   locale: localeSchema.optional(),
   theme: themeSchema.optional(),
   uiFontScale: uiFontScaleSchema.optional(),
+  accentColor: z.enum(['blue', 'purple', 'green', 'orange', 'pink', 'cyan']).optional(),
+  modelProvider: z.object({ id: z.string().max(256), name: z.string().max(256) }).optional(),
   provider: modelProviderPatchSchema.optional(),
   agents: z.object({
     kun: kunRuntimePatchSchema.optional()
@@ -502,7 +504,23 @@ const settingsPatchObjectSchema = z.object({
   guiUpdate: z.object({
     channel: z.enum(GUI_UPDATE_CHANNELS).optional()
   }).strict().optional(),
-  codePromptPrefix: z.string().max(MAX_CHANNEL_TEXT_LENGTH).optional()
+  agnesGeneration: z.object({
+    enabled: z.boolean().optional(),
+    baseUrl: z.string().max(2048).optional(),
+    apiKey: z.string().max(2048).optional(),
+    imageModel: z.string().max(256).optional(),
+    videoModel: z.string().max(256).optional()
+  }).optional(),
+  codePromptPrefix: z.string().max(MAX_CHANNEL_TEXT_LENGTH).optional(),
+  preferences: z.object({
+    autoSaveHistory: z.boolean().optional(),
+    rememberLastWorkspace: z.boolean().optional(),
+    autoFocusInput: z.boolean().optional(),
+    showWelcomeTips: z.boolean().optional(),
+    compactMode: z.boolean().optional(),
+    conversationSortOrder: z.enum(['latest', 'oldest', 'alphabetical']).optional(),
+    defaultCompletionMode: z.enum(['agent', 'plan']).optional()
+  }).optional()
 }).strict()
 
 export const settingsPatchSchema = z.preprocess(stripLegacySettingsPatchKeys, settingsPatchObjectSchema)

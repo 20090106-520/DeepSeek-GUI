@@ -47,6 +47,15 @@ async function getSettingsModel(type: GenerationType): Promise<string> {
   } catch { return '' }
 }
 
+async function saveModelToSettings(type: GenerationType, model: string): Promise<void> {
+  try {
+    const patch = type === 'video'
+      ? { agnesGeneration: { videoModel: model } }
+      : { agnesGeneration: { imageModel: model } }
+    await window.dsGui?.setSettings(patch)
+  } catch { /* ignore */ }
+}
+
 export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): ReactElement {
   const { t } = useTranslation()
   const [generationType, setGenerationType] = useState<GenerationType>('image')
@@ -61,6 +70,15 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
   const [resultVideoUrl, setResultVideoUrl] = useState<string | null>(null)
   const [resultError, setResultError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const modelSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleModelChange = useCallback((value: string) => {
+    setSelectedModel(value)
+    if (modelSaveTimerRef.current) clearTimeout(modelSaveTimerRef.current)
+    modelSaveTimerRef.current = setTimeout(() => {
+      void saveModelToSettings(generationType, value)
+    }, 800)
+  }, [generationType])
 
   useEffect(() => {
     void getSettingsModel(generationType).then((m) => { if (m) setSelectedModel(m) })
@@ -237,7 +255,7 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
               type="text"
               className="w-full rounded-xl border border-ds-border bg-ds-card px-4 py-2.5 text-sm text-ds-ink placeholder-ds-faint outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
               value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
+              onChange={(e) => handleModelChange(e.target.value)}
               placeholder="agnes-image-2.1-flash"
             />
             <p className="mt-1 text-xs text-ds-muted">
