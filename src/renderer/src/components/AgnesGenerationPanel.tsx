@@ -14,18 +14,29 @@ import {
   Pencil,
   FileImage,
   Sparkles,
-  Upload
+  Upload,
+  CheckCircle2,
+  Play,
+  ExternalLink
 } from 'lucide-react'
 
 
 type GenerationType = 'image' | 'video' | 'edit' | 'understand'
 
+type GenerationStatus = 'idle' | 'uploading' | 'submitting' | 'processing' | 'polling' | 'done' | 'error'
 
-const GENERATION_TYPES: { id: GenerationType; icon: ReactElement; labelKey: string; color: string }[] = [
-  { id: 'image', icon: <ImageIcon className="h-4 w-4" />, labelKey: 'agnesImage', color: 'from-violet-500 to-purple-500' },
-  { id: 'edit', icon: <Pencil className="h-4 w-4" />, labelKey: 'agnesEdit', color: 'from-blue-500 to-cyan-500' },
-  { id: 'video', icon: <VideoIcon className="h-4 w-4" />, labelKey: 'agnesVideo', color: 'from-purple-500 to-pink-500' },
-  { id: 'understand', icon: <Eye className="h-4 w-4" />, labelKey: 'agnesUnderstand', color: 'from-emerald-500 to-teal-500' }
+interface ProgressInfo {
+  status: GenerationStatus
+  percent: number
+  message: string
+  elapsed: number
+}
+
+const GENERATION_TYPES: { id: GenerationType; icon: ReactElement; labelKey: string; color: string; bg: string }[] = [
+  { id: 'image', icon: <ImageIcon className="h-4 w-4" />, labelKey: 'agnesImage', color: 'from-violet-500 to-purple-500', bg: 'bg-violet-500' },
+  { id: 'edit', icon: <Pencil className="h-4 w-4" />, labelKey: 'agnesEdit', color: 'from-blue-500 to-cyan-500', bg: 'bg-blue-500' },
+  { id: 'video', icon: <VideoIcon className="h-4 w-4" />, labelKey: 'agnesVideo', color: 'from-purple-500 to-pink-500', bg: 'bg-purple-500' },
+  { id: 'understand', icon: <Eye className="h-4 w-4" />, labelKey: 'agnesUnderstand', color: 'from-emerald-500 to-teal-500', bg: 'bg-emerald-500' }
 ]
 
 interface AgnesGenerationPanelProps {
@@ -35,6 +46,11 @@ interface AgnesGenerationPanelProps {
 function getHeaderGradient(type: GenerationType): string {
   const found = GENERATION_TYPES.find(g => g.id === type)
   return found?.color ?? 'from-purple-500 to-pink-500'
+}
+
+function getProgressBg(type: GenerationType): string {
+  const found = GENERATION_TYPES.find(g => g.id === type)
+  return found?.bg ?? 'bg-purple-500'
 }
 
 async function getSettingsModel(type: GenerationType): Promise<string> {
@@ -56,6 +72,23 @@ async function saveModelToSettings(type: GenerationType, model: string): Promise
   } catch { /* ignore */ }
 }
 
+function formatElapsed(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}m${s > 0 ? ` ${s}s` : ''}`
+}
+
+const STATUS_LABELS: Record<GenerationStatus, string> = {
+  idle: '',
+  uploading: 'agnesStatusUploading',
+  submitting: 'agnesStatusSubmitting',
+  processing: 'agnesStatusProcessing',
+  polling: 'agnesStatusPolling',
+  done: 'agnesStatusDone',
+  error: 'agnesStatusError'
+}
+
 export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): ReactElement {
   const { t } = useTranslation()
   const [generationType, setGenerationType] = useState<GenerationType>('image')
@@ -69,8 +102,31 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
   const [resultVideoUrl, setResultVideoUrl] = useState<string | null>(null)
   const [resultError, setResultError] = useState<string | null>(null)
+  const [progress, setProgress] = useState<ProgressInfo>({ status: 'idle', percent: 0, message: '', elapsed: 0 })
   const fileInputRef = useRef<HTMLInputElement>(null)
   const modelSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const startTimeRef = useRef<number>(0)
+
+  const startElapsedTimer = useCallback(() => {
+    startTimeRef.current = Date.now()
+    if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current)
+    elapsedTimerRef.current = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000)
+      setProgress(prev => ({ ...prev, elapsed }))
+    }, 1000)
+  }, [])
+
+  const stopElapsedTimer = useCallback(() => {
+    if (elapsedTimerRef.current) {
+      clearInterval(elapsedTimerRef.current)
+      elapsedTimerRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => { stopElapsedTimer() }
+  }, [stopElapsedTimer])
 
   const handleModelChange = useCallback((value: string) => {
     setSelectedModel(value)
@@ -90,6 +146,11 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
     setPrompt('')
     setUploadedImage(null)
     setUploadedImageName('')
+    setResultContent(null)
+    setResultImageUrl(null)
+    setResultVideoUrl(null)
+    setResultError(null)
+    setProgress({ status: 'idle', percent: 0, message: '', elapsed: 0 })
   }, [])
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,13 +174,16 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
     setResultImageUrl(null)
     setResultVideoUrl(null)
     setResultError(null)
+    startElapsedTimer()
 
     try {
       const model = selectedModel
       const dsGui = window.dsGui
 
       if (generationType === 'image' || generationType === 'edit') {
+        setProgress({ status: 'submitting', percent: 15, message: t('agnesStatusSubmitting'), elapsed: 0 })
         const isImg2Img = generationType === 'edit' && !!uploadedImage
+        setProgress(prev => ({ ...prev, status: 'processing', percent: 40, message: t('agnesStatusProcessing') }))
         const result = await dsGui.agnesGenerateImage({
           prompt,
           model,
@@ -129,12 +193,15 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
         })
 
         if (result.ok) {
+          setProgress(prev => ({ ...prev, status: 'done', percent: 100, message: t('agnesStatusDone') }))
           setResultImageUrl(result.imageUrl || (result.imageBase64 ? `data:image/png;base64,${result.imageBase64}` : null))
           setResultContent(`${generationType === 'edit' ? t('agnesImageEdit') : t('agnesImageGeneration')} — ${model}`)
         } else {
+          setProgress(prev => ({ ...prev, status: 'error', percent: 0, message: t('agnesStatusError') }))
           setResultError(result.message)
         }
       } else if (generationType === 'video') {
+        setProgress({ status: 'submitting', percent: 10, message: t('agnesStatusSubmitting'), elapsed: 0 })
         const videoPayload: Record<string, unknown> = {
           prompt,
           model,
@@ -144,12 +211,15 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
         if (uploadedImage) {
           videoPayload.image = uploadedImage
         }
+        setProgress(prev => ({ ...prev, status: 'polling', percent: 20, message: t('agnesStatusPolling') }))
         const result = await dsGui.agnesGenerateVideo(videoPayload as any)
 
         if (result.ok) {
+          setProgress(prev => ({ ...prev, status: 'done', percent: 100, message: t('agnesStatusDone') }))
           setResultVideoUrl(result.videoUrl)
           setResultContent(`${t('agnesVideoGeneration')} — ${model}`)
         } else {
+          setProgress(prev => ({ ...prev, status: 'error', percent: 0, message: t('agnesStatusError') }))
           setResultError(result.message)
         }
       } else {
@@ -157,12 +227,14 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
         setResultError(t('agnesApiNote'))
       }
     } catch (e) {
+      setProgress(prev => ({ ...prev, status: 'error', percent: 0, message: t('agnesStatusError') }))
       setResultError(e instanceof Error ? e.message : String(e))
     } finally {
       setGenerating(false)
+      stopElapsedTimer()
       setPrompt('')
     }
-  }, [prompt, selectedModel, generationType, generating, uploadedImage, t])
+  }, [prompt, selectedModel, generationType, generating, uploadedImage, t, selectedSize, startElapsedTimer, stopElapsedTimer])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -170,10 +242,27 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
     }
   }, [handleGenerate])
 
+  const handleDownload = useCallback(async () => {
+    if (!resultImageUrl && !resultVideoUrl) return
+    const url = resultImageUrl || resultVideoUrl
+    if (!url) return
+    try {
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `agnes-${generationType}-${Date.now()}.${resultVideoUrl ? 'mp4' : 'png'}`
+      a.target = '_blank'
+      a.rel = 'noopener noreferrer'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    } catch { /* ignore */ }
+  }, [resultImageUrl, resultVideoUrl, generationType])
 
   const needsImage = generationType === 'edit' || generationType === 'understand' || generationType === 'video'
   const gradient = getHeaderGradient(generationType)
+  const progressBg = getProgressBg(generationType)
   const canSubmit = prompt.trim() && !generating && ((generationType === 'edit' || generationType === 'understand') ? !!uploadedImage : true)
+  const isActive = progress.status !== 'idle' && progress.status !== 'error'
 
   const getPlaceholder = (): string => {
     switch (generationType) {
@@ -195,34 +284,37 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-ds-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-ds-card shadow-2xl border border-ds-border/50" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-ds-border px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${gradient}`}>
-              {generationType === 'image' ? <ImageIcon className="h-5 w-5 text-white" /> :
-               generationType === 'video' ? <VideoIcon className="h-5 w-5 text-white" /> :
-               generationType === 'edit' ? <Pencil className="h-5 w-5 text-white" /> :
-               <Eye className="h-5 w-5 text-white" />}
+        <div className={`relative overflow-hidden rounded-t-2xl bg-gradient-to-r ${gradient} px-6 py-4`}>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.15),transparent_70%)]" />
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                {generationType === 'image' ? <ImageIcon className="h-5 w-5 text-white" /> :
+                 generationType === 'video' ? <VideoIcon className="h-5 w-5 text-white" /> :
+                 generationType === 'edit' ? <Pencil className="h-5 w-5 text-white" /> :
+                 <Eye className="h-5 w-5 text-white" />}
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-white">
+                  {generationType === 'image' ? t('agnesImageGeneration') :
+                   generationType === 'video' ? t('agnesVideoGeneration') :
+                   generationType === 'edit' ? t('agnesImageEdit') :
+                   t('agnesMultimodalUnderstand')}
+                </h2>
+                <p className="text-sm text-white/70">Agnes AI</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-ds-ink">
-                {generationType === 'image' ? t('agnesImageGeneration') :
-                 generationType === 'video' ? t('agnesVideoGeneration') :
-                 generationType === 'edit' ? t('agnesImageEdit') :
-                 t('agnesMultimodalUnderstand')}
-              </h2>
-              <p className="text-sm text-ds-muted">Agnes AI</p>
-            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-2 text-white/70 transition hover:bg-white/20 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-2 text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
 
         {/* Type Selector */}
@@ -246,6 +338,33 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
 
         {/* Content - scrollable */}
         <div className="flex-1 space-y-4 overflow-y-auto p-6">
+          {/* Progress Bar */}
+          {isActive && (
+            <div className="space-y-2 rounded-xl border border-ds-border bg-ds-subtle p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Loader2 className={`h-4 w-4 animate-spin text-purple-500`} />
+                  <span className="text-sm font-medium text-ds-ink">{progress.message}</span>
+                </div>
+                {progress.elapsed > 0 && (
+                  <span className="text-xs text-ds-muted">{formatElapsed(progress.elapsed)}</span>
+                )}
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-ds-border/50">
+                <div
+                  className={`h-full rounded-full ${progressBg} transition-all duration-700 ease-out`}
+                  style={{ width: `${progress.percent}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-ds-muted">{progress.percent}%</span>
+                {generationType === 'video' && progress.status === 'polling' && (
+                  <span className="text-xs text-ds-muted">{t('agnesVideoPollingHint')}</span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Model Input */}
           <div>
             <label className="mb-2 block text-sm font-medium text-ds-ink">
@@ -365,15 +484,47 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-ds-ink">{resultContent}</p>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <p className="text-sm font-medium text-ds-ink">{resultContent}</p>
+                  </div>
                   {resultImageUrl && (
-                    <img src={resultImageUrl} alt={resultContent ?? ''} className="max-h-64 rounded-lg object-contain" />
+                    <div className="relative group">
+                      <img src={resultImageUrl} alt={resultContent ?? ''} className="w-full max-h-80 rounded-lg object-contain border border-ds-border" />
+                      <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/0 opacity-0 transition group-hover:bg-black/20 group-hover:opacity-100">
+                        <button
+                          type="button"
+                          onClick={handleDownload}
+                          className="flex items-center gap-1.5 rounded-lg bg-white/90 px-3 py-1.5 text-sm font-medium text-ds-ink shadow-lg transition hover:bg-white"
+                        >
+                          <Download className="h-4 w-4" />
+                          {t('agnesDownload')}
+                        </button>
+                      </div>
+                    </div>
                   )}
                   {resultVideoUrl && (
-                    <a href={resultVideoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-purple-500 hover:underline">
-                      <VideoIcon className="h-4 w-4" />
-                      {t('agnesVideoLink')}
-                    </a>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <a href={resultVideoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg bg-purple-500/10 px-3 py-1.5 text-sm font-medium text-purple-600 transition hover:bg-purple-500/20 dark:text-purple-400">
+                          <ExternalLink className="h-4 w-4" />
+                          {t('agnesVideoLink')}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={handleDownload}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-ds-subtle px-3 py-1.5 text-sm font-medium text-ds-ink transition hover:bg-ds-hover"
+                        >
+                          <Download className="h-4 w-4" />
+                          {t('agnesDownload')}
+                        </button>
+                      </div>
+                      <video
+                        src={resultVideoUrl}
+                        controls
+                        className="w-full max-h-80 rounded-lg border border-ds-border"
+                      />
+                    </div>
                   )}
                 </div>
               )}
@@ -435,7 +586,7 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
             type="button"
             onClick={() => void handleGenerate()}
             disabled={!canSubmit}
-            className={`flex items-center gap-2 rounded-xl bg-gradient-to-r ${gradient} px-4 py-2 text-sm font-medium text-white shadow-lg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50`}
+            className={`flex items-center gap-2 rounded-xl bg-gradient-to-r ${gradient} px-5 py-2 text-sm font-medium text-white shadow-lg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50`}
           >
             {generating ? (
               <>
@@ -444,7 +595,7 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
               </>
             ) : (
               <>
-                <Send className="h-4 w-4" />
+                <Sparkles className="h-4 w-4" />
                 {getSubmitLabel()}
               </>
             )}
