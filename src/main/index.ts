@@ -661,11 +661,15 @@ function createSplashWindow(): BrowserWindow {
     center: true,
     skipTaskbar: true,
     webPreferences: {
-      contextIsolation: true,
-      sandbox: false
+      contextIsolation: false,
+      sandbox: false,
+      nodeIntegration: false
     }
   })
   splash.loadFile(join(__dirname, 'splash.html'))
+  splash.webContents.on('did-fail-load', (_event, errorCode, errorDesc) => {
+    console.error('[deepseek-gui] splash failed to load:', errorCode, errorDesc)
+  })
   splash.once('ready-to-show', () => {
     splash.show()
   })
