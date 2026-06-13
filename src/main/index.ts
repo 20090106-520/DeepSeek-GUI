@@ -162,6 +162,7 @@ if (!runningClawScheduleMcpServer && process.platform === 'win32') {
 }
 
 let mainWindow: BrowserWindow | null = null
+let splashWindow: BrowserWindow | null = null
 let store: JsonSettingsStore
 let logDir = ''
 let clawRuntime: ClawRuntime | null = null
@@ -646,8 +647,47 @@ async function ensureKunRuntime(settings: AppSettingsV1): Promise<void> {
   }
 }
 
+function createSplashWindow(): BrowserWindow {
+  const splash = new BrowserWindow({
+    width: 420,
+    height: 320,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    show: false,
+    alwaysOnTop: true,
+    center: true,
+    skipTaskbar: true,
+    webPreferences: {
+      contextIsolation: true,
+      sandbox: true
+    }
+  })
+  splash.loadFile(join(__dirname, 'splash.html'))
+  splash.once('ready-to-show', () => {
+    splash.show()
+  })
+  return splash
+}
+
+function closeSplashWindow(): void {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close()
+  }
+  splashWindow = null
+}
+
 function createWindow(options: { suppressInitialShow?: boolean } = {}): void {
   traceStartup('createWindow:start')
+
+  if (!devServerHintUrl() && !options.suppressInitialShow) {
+    try {
+      splashWindow = createSplashWindow()
+    } catch {
+      splashWindow = null
+    }
+  }
+
   const preloadPath = resolvePreloadPath()
   const usesDesktopTitleBar = process.platform === 'win32' || process.platform === 'linux'
   mainWindow = new BrowserWindow({
@@ -679,6 +719,7 @@ function createWindow(options: { suppressInitialShow?: boolean } = {}): void {
   const showWindow = (): void => {
     if (options.suppressInitialShow) return
     if (!mainWindow || mainWindow.isDestroyed() || mainWindow.isVisible()) return
+    closeSplashWindow()
     mainWindow.show()
   }
   mainWindow.on('close', (event) => {
