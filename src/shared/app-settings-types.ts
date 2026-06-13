@@ -456,6 +456,11 @@ export type AgnesGenerationProviderV1 = {
   apiKey: string
   imageModel: string
   videoModel: string
+  fallbackEnabled: boolean
+  fallbackBaseUrl: string
+  fallbackApiKey: string
+  fallbackImageModel: string
+  fallbackVideoModel: string
 }
 
 export const DEFAULT_AGNES_GENERATION_PROVIDER: AgnesGenerationProviderV1 = {
@@ -463,7 +468,12 @@ export const DEFAULT_AGNES_GENERATION_PROVIDER: AgnesGenerationProviderV1 = {
   baseUrl: 'https://apihub.agnes-ai.com',
   apiKey: '',
   imageModel: 'agnes-image-2.1-flash',
-  videoModel: 'agnes-video-v2.0'
+  videoModel: 'agnes-video-v2.0',
+  fallbackEnabled: false,
+  fallbackBaseUrl: 'https://integrate.api.nvidia.com/v1',
+  fallbackApiKey: '',
+  fallbackImageModel: 'stabilityai/stable-diffusion-3-5-large',
+  fallbackVideoModel: ''
 }
 
 export type GuiUpdateConfigV1 = {

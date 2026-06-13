@@ -827,6 +827,29 @@ export function registerAppIpcHandlers(options: RegisterAppIpcHandlersOptions): 
     return { ok: true }
   })
 
+  type AgnesFallbackConfig = {
+    fallbackEnabled: boolean
+    fallbackBaseUrl: string
+    fallbackApiKey: string
+    fallbackImageModel: string
+    fallbackVideoModel: string
+  }
+
+  function isRateLimited(status: number): boolean {
+    return status === 429 || status === 503
+  }
+
+  function resolveFallbackEndpoint(agnes: AgnesFallbackConfig, type: 'image' | 'video'): { baseUrl: string; apiKey: string; model: string } | null {
+    if (!agnes.fallbackEnabled || !agnes.fallbackApiKey.trim() || !agnes.fallbackBaseUrl.trim()) return null
+    const model = type === 'image' ? agnes.fallbackImageModel : agnes.fallbackVideoModel
+    if (!model.trim()) return null
+    return {
+      baseUrl: agnes.fallbackBaseUrl.replace(/\/+$/, ''),
+      apiKey: agnes.fallbackApiKey.trim(),
+      model
+    }
+  }
+
   ipcMain.handle('agnes:generate-image', async (_, payload: unknown) => {
     const request = parseIpcPayload('agnes:generate-image', z.object({
       prompt: z.string().min(1).max(MAX_BODY_BYTES),
@@ -873,6 +896,28 @@ export function registerAppIpcHandlers(options: RegisterAppIpcHandlersOptions): 
       })
       if (!res.ok) {
         const text = await res.text()
+        if (isRateLimited(res.status)) {
+          const fallback = resolveFallbackEndpoint(agnes, 'image')
+          if (fallback) {
+            const fallbackBody = { ...body, model: fallback.model }
+            const fallbackRes = await fetch(`${fallback.baseUrl}/v1/images/generations`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${fallback.apiKey}`
+              },
+              body: JSON.stringify(fallbackBody)
+            })
+            if (!fallbackRes.ok) {
+              const fallbackText = await fallbackRes.text()
+              return { ok: false, message: `Primary API rate limited, fallback also failed (${fallbackRes.status}): ${fallbackText.slice(0, 500)}` }
+            }
+            const fallbackData = await fallbackRes.json() as { data?: Array<{ url?: string; b64_json?: string }> }
+            const fallbackItem = fallbackData.data?.[0]
+            if (!fallbackItem) return { ok: false, message: 'No image data in fallback response' }
+            return { ok: true, imageUrl: fallbackItem.url ?? '', imageBase64: fallbackItem.b64_json }
+          }
+        }
         return { ok: false, message: `API error ${res.status}: ${text.slice(0, 500)}` }
       }
       const data = await res.json() as { data?: Array<{ url?: string; b64_json?: string }> }
@@ -932,6 +977,53 @@ export function registerAppIpcHandlers(options: RegisterAppIpcHandlersOptions): 
       })
       if (!createRes.ok) {
         const text = await createRes.text()
+        if (isRateLimited(createRes.status)) {
+          const fallback = resolveFallbackEndpoint(agnes, 'video')
+          if (fallback) {
+            const fallbackBody = { ...body, model: fallback.model }
+            const fallbackRes = await fetch(`${fallback.baseUrl}/v1/videos`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${fallback.apiKey}`
+              },
+              body: JSON.stringify(fallbackBody)
+            })
+            if (!fallbackRes.ok) {
+              const fallbackText = await fallbackRes.text()
+              return { ok: false, message: `Primary API rate limited, fallback also failed (${fallbackRes.status}): ${fallbackText.slice(0, 500)}` }
+            }
+            const fallbackData = await fallbackRes.json() as { video_id?: string; task_id?: string; status?: string }
+            const fallbackVideoId = fallbackData.video_id
+            if (!fallbackVideoId) {
+              return { ok: false, message: 'No video_id in fallback create response' }
+            }
+            const pollInterval = 5000
+            const maxPolls = 72
+            for (let i = 0; i < maxPolls; i++) {
+              await new Promise((r) => setTimeout(r, pollInterval))
+              const pollRes = await fetch(
+                `${fallback.baseUrl}/agnesapi?video_id=${encodeURIComponent(fallbackVideoId)}`,
+                { headers: { 'Authorization': `Bearer ${fallback.apiKey}` } }
+              )
+              if (!pollRes.ok) continue
+              const pollData = await pollRes.json() as {
+                status?: string
+                progress?: number
+                remixed_from_video_id?: string
+                error?: string | { message?: string }
+              }
+              if (pollData.status === 'completed' && pollData.remixed_from_video_id) {
+                return { ok: true, videoUrl: pollData.remixed_from_video_id, thumbnailUrl: '' }
+              }
+              if (pollData.status === 'failed') {
+                const errMsg = typeof pollData.error === 'object' ? pollData.error?.message : pollData.error
+                return { ok: false, message: `Fallback video generation failed: ${errMsg ?? 'unknown error'}` }
+              }
+            }
+            return { ok: false, message: 'Fallback video generation timed out (6 minutes)' }
+          }
+        }
         return { ok: false, message: `API error ${createRes.status}: ${text.slice(0, 500)}` }
       }
       const createData = await createRes.json() as {

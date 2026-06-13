@@ -509,7 +509,12 @@ const settingsPatchObjectSchema = z.object({
     baseUrl: z.string().max(2048).optional(),
     apiKey: z.string().max(2048).optional(),
     imageModel: z.string().max(256).optional(),
-    videoModel: z.string().max(256).optional()
+    videoModel: z.string().max(256).optional(),
+    fallbackEnabled: z.boolean().optional(),
+    fallbackBaseUrl: z.string().max(2048).optional(),
+    fallbackApiKey: z.string().max(2048).optional(),
+    fallbackImageModel: z.string().max(256).optional(),
+    fallbackVideoModel: z.string().max(256).optional()
   }).optional(),
   codePromptPrefix: z.string().max(MAX_CHANNEL_TEXT_LENGTH).optional(),
   preferences: z.object({

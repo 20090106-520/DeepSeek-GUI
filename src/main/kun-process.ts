@@ -241,7 +241,10 @@ export async function startKunChild(settings: AppSettingsV1): Promise<void> {
       ...process.env,
       ELECTRON_RUN_AS_NODE: '1',
       KUN_RUNTIME_TOKEN: runtime.runtimeToken,
-      DEEPSEEK_API_KEY: runtime.apiKey || process.env.DEEPSEEK_API_KEY || ''
+      DEEPSEEK_API_KEY: runtime.apiKey || process.env.DEEPSEEK_API_KEY || '',
+      KUN_FALLBACK_BASE_URL: settings.agnesGeneration?.fallbackEnabled ? (settings.agnesGeneration.fallbackBaseUrl?.trim() || '') : '',
+      KUN_FALLBACK_API_KEY: settings.agnesGeneration?.fallbackEnabled ? (settings.agnesGeneration.fallbackApiKey?.trim() || '') : '',
+      KUN_FALLBACK_MODEL: settings.agnesGeneration?.fallbackEnabled ? (settings.agnesGeneration.fallbackImageModel?.trim() || '') : ''
     },
     stdio: ['ignore', 'pipe', 'pipe'],
     detached: false

@@ -38,6 +38,7 @@ export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): R
   const [privacySettings, setPrivacySettings] = useState(getPrivacySettings)
   const [privacySuccess, setPrivacySuccess] = useState(false)
   const [showAgnesApiKey, setShowAgnesApiKey] = useState(false)
+  const [showAgnesFallbackApiKey, setShowAgnesFallbackApiKey] = useState(false)
   
   const {
     t,
@@ -633,6 +634,76 @@ export function GeneralSettingsSection({ ctx }: { ctx: Record<string, any> }): R
                         />
                       }
                     />
+                    <div className="my-3 border-t border-ds-border" />
+                    <SettingRow
+                      title={t('agnesFallbackEnabled')}
+                      description={t('agnesFallbackEnabledDesc')}
+                      control={
+                        <Toggle
+                          checked={form.agnesGeneration?.fallbackEnabled ?? false}
+                          onChange={(v) => update({ agnesGeneration: { fallbackEnabled: v } })}
+                        />
+                      }
+                    />
+                    {(form.agnesGeneration?.fallbackEnabled) && (
+                      <>
+                        <SettingRow
+                          title={t('agnesFallbackBaseUrl')}
+                          description={t('agnesFallbackBaseUrlDesc')}
+                          control={
+                            <input
+                              type="text"
+                              className="w-full rounded-lg border border-ds-border bg-ds-card px-3 py-1.5 text-sm text-ds-ink outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+                              value={form.agnesGeneration?.fallbackBaseUrl ?? ''}
+                              onChange={(e) => update({ agnesGeneration: { fallbackBaseUrl: e.target.value } })}
+                              placeholder="https://integrate.api.nvidia.com/v1"
+                            />
+                          }
+                        />
+                        <SettingRow
+                          title={t('agnesFallbackApiKey')}
+                          description={t('agnesFallbackApiKeyDesc')}
+                          control={
+                            <SecretInput
+                              value={form.agnesGeneration?.fallbackApiKey ?? ''}
+                              onChange={(v) => update({ agnesGeneration: { fallbackApiKey: v } })}
+                              visible={showAgnesFallbackApiKey}
+                              onToggleVisibility={() => setShowAgnesFallbackApiKey((v) => !v)}
+                              placeholder="nvapi-..."
+                              autoComplete="off"
+                              showLabel={t('showSecret')}
+                              hideLabel={t('hideSecret')}
+                            />
+                          }
+                        />
+                        <SettingRow
+                          title={t('agnesFallbackImageModel')}
+                          description={t('agnesFallbackImageModelDesc')}
+                          control={
+                            <input
+                              type="text"
+                              className="w-full rounded-lg border border-ds-border bg-ds-card px-3 py-1.5 text-sm text-ds-ink outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+                              value={form.agnesGeneration?.fallbackImageModel ?? ''}
+                              onChange={(e) => update({ agnesGeneration: { fallbackImageModel: e.target.value } })}
+                              placeholder="stabilityai/stable-diffusion-3-5-large"
+                            />
+                          }
+                        />
+                        <SettingRow
+                          title={t('agnesFallbackVideoModel')}
+                          description={t('agnesFallbackVideoModelDesc')}
+                          control={
+                            <input
+                              type="text"
+                              className="w-full rounded-lg border border-ds-border bg-ds-card px-3 py-1.5 text-sm text-ds-ink outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+                              value={form.agnesGeneration?.fallbackVideoModel ?? ''}
+                              onChange={(e) => update({ agnesGeneration: { fallbackVideoModel: e.target.value } })}
+                              placeholder="google/gemma-3n-e4b-it"
+                            />
+                          }
+                        />
+                      </>
+                    )}
                   </>
                 )}
                 <div className="mt-3 flex items-center gap-1.5 text-xs text-ds-muted">

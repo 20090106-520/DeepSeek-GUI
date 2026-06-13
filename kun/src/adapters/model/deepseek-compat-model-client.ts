@@ -21,18 +21,15 @@ export type DeepseekCompatConfig = {
   baseUrl: string
   apiKey: string
   model: string
-  /** Compatible request/response protocol to use for custom providers. */
   endpointFormat?: ModelEndpointFormat
-  /** Optional extra headers, e.g. project or session ids. */
   headers?: Record<string, string>
-  /** HTTP fetch implementation. Defaults to global `fetch`. */
   fetchImpl?: typeof fetch
-  /** Maximum number of messages to send. Defaults to the entire history. */
   historyLimit?: number
-  /** When true, the client requests a non-streaming response. */
   nonStreaming?: boolean
-  /** Maximum idle time between streaming chunks before the turn fails. */
   streamIdleTimeoutMs?: number
+  fallbackBaseUrl?: string
+  fallbackApiKey?: string
+  fallbackModel?: string
 }
 
 type ChatMessage = {
@@ -204,6 +201,10 @@ export class DeepseekCompatModelClient implements ModelClient {
         return
       }
       const classified = await this.classifyHttpError(response.status, text)
+      if (classified.code === 'rate_limited' && this.hasFallback()) {
+        yield* this.streamWithFallback(request)
+        return
+      }
       yield {
         kind: 'error',
         message: classified.message,
@@ -225,6 +226,45 @@ export class DeepseekCompatModelClient implements ModelClient {
 
   private endpointFormat(): ModelEndpointFormat {
     return normalizeModelEndpointFormat(this.config.endpointFormat ?? DEFAULT_MODEL_ENDPOINT_FORMAT)
+  }
+
+  private hasFallback(): boolean {
+    return !!(this.config.fallbackBaseUrl?.trim() && this.config.fallbackApiKey?.trim() && this.config.fallbackModel?.trim())
+  }
+
+  private async *streamWithFallback(request: ModelRequest): AsyncIterable<ModelStreamChunk> {
+    const fallbackBaseUrl = this.config.fallbackBaseUrl!.replace(/\/+$/, '')
+    const fallbackApiKey = this.config.fallbackApiKey!.trim()
+    const fallbackModel = this.config.fallbackModel!.trim()
+    const endpointFormat = this.endpointFormat()
+    const url = buildModelEndpointUrl(fallbackBaseUrl, endpointFormat)
+    const stream = request.stream ?? !this.config.nonStreaming
+    const fallbackRequest = { ...request, model: fallbackModel }
+    const body = this.buildRequestBody(fallbackRequest, stream, { strictCompat: true })
+    const headers = this.buildHeaders(stream, endpointFormat)
+    headers['Authorization'] = `Bearer ${fallbackApiKey}`
+    const result = await this.postChatCompletion(url, headers, body, request.abortSignal)
+    if (result.kind === 'error') {
+      yield { kind: 'error', message: `Fallback also failed: ${result.message}` }
+      return
+    }
+    const response = result.response
+    if (!response.ok) {
+      const text = await response.text()
+      const classified = await this.classifyHttpError(response.status, text)
+      yield { kind: 'error', message: `Fallback API error: ${classified.message}`, code: classified.code }
+      return
+    }
+    if (this.config.nonStreaming || response.headers.get('content-type')?.includes('application/json')) {
+      const json = (await response.json()) as ChatCompletionResponse
+      yield* this.materializeNonStreaming(json, endpointFormat)
+      return
+    }
+    if (!response.body) {
+      yield { kind: 'error', message: 'Fallback model response had no body' }
+      return
+    }
+    yield* this.streamSse(response.body, request.abortSignal, endpointFormat)
   }
 
   private async postChatCompletion(

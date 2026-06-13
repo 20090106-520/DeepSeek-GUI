@@ -144,7 +144,10 @@ export async function createKunServeRuntime(
     baseUrl: options.baseUrl,
     apiKey: options.apiKey,
     endpointFormat: options.endpointFormat ?? DEFAULT_MODEL_ENDPOINT_FORMAT,
-    model: options.model
+    model: options.model,
+    fallbackBaseUrl: process.env.KUN_FALLBACK_BASE_URL || undefined,
+    fallbackApiKey: process.env.KUN_FALLBACK_API_KEY || undefined,
+    fallbackModel: process.env.KUN_FALLBACK_MODEL || undefined
   })
   const modelProfiles = modelContextProfilesFromConfig({
     contextCompaction: options.contextCompaction,
