@@ -134,6 +134,8 @@ type RegisterAppIpcHandlersOptions = {
   logError: (category: string, message: string, detail?: unknown) => void
 }
 
+const MAX_BODY_BYTES = 100_000
+
 function parseIpcPayload<T>(channel: string, schema: z.ZodType<T>, payload: unknown): T {
   const parsed = schema.safeParse(payload)
   if (parsed.success) return parsed.data
@@ -753,7 +755,7 @@ export function registerAppIpcHandlers(options: RegisterAppIpcHandlersOptions): 
     )
   )
   ipcMain.handle('plugin:list', async () =>
-    listPlugins(settingsStore.getSnapshot())
+    listPlugins(await store.load())
   )
   ipcMain.handle('plugin:install', async (_, payload: unknown) =>
     installPlugin(payload as { id: string; kind: 'mcp' | 'skill'; source?: string; version?: string })
@@ -833,7 +835,7 @@ export function registerAppIpcHandlers(options: RegisterAppIpcHandlersOptions): 
       width: z.number().int().min(256).max(4096).optional(),
       height: z.number().int().min(256).max(4096).optional()
     }).strict(), payload)
-    const settings = readAppSettings()
+    const settings = await store.load()
     const agnes = settings.agnesGeneration
     if (!agnes.enabled || !agnes.apiKey.trim()) {
       return { ok: false, message: 'Agnes image generation is not configured. Please set API key in Settings.' }
@@ -875,7 +877,7 @@ export function registerAppIpcHandlers(options: RegisterAppIpcHandlersOptions): 
       duration: z.number().int().min(5).max(60).optional(),
       aspectRatio: z.string().max(16).optional()
     }).strict(), payload)
-    const settings = readAppSettings()
+    const settings = await store.load()
     const agnes = settings.agnesGeneration
     if (!agnes.enabled || !agnes.apiKey.trim()) {
       return { ok: false, message: 'Agnes video generation is not configured. Please set API key in Settings.' }

@@ -181,6 +181,10 @@ const api = {
     ipcRenderer.invoke('agnes:generate-image', payload),
   agnesGenerateVideo: (payload) =>
     ipcRenderer.invoke('agnes:generate-video', payload),
+  submitFeedback: (feedback) =>
+    ipcRenderer.invoke('feedback:submit', feedback),
+  lockApp: () =>
+    ipcRenderer.invoke('app:lock'),
 } satisfies DsGuiApi
 
 contextBridge.exposeInMainWorld('dsGui', api)

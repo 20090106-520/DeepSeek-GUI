@@ -68,7 +68,11 @@ function buildSettings(): AppSettingsV1 {
     claw: defaultClawSettings(),
     schedule: defaultScheduleSettings(),
     guiUpdate: { channel: 'stable' },
-    codePromptPrefix: ''
+    codePromptPrefix: '',
+    accentColor: 'blue',
+    modelProvider: { id: 'deepseek', name: 'DeepSeek' },
+    agnesGeneration: { enabled: false, baseUrl: '', apiKey: '', imageModel: '', videoModel: '' },
+    preferences: { autoSaveHistory: true, rememberLastWorkspace: true, autoFocusInput: true, showWelcomeTips: true, compactMode: false, conversationSortOrder: 'latest', defaultCompletionMode: 'agent' }
   }
   settings.claw.enabled = true
   settings.claw.im.workspaceRoot = '/tmp/claw'

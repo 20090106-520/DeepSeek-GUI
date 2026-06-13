@@ -71,7 +71,8 @@ const EMPTY_TOKEN_ECONOMY_SAVINGS_STATE: TokenEconomySavingsState = {
 const MODEL_ENDPOINT_FORMAT_LABEL_KEYS: Record<ModelEndpointFormat, string> = {
   chat_completions: 'modelEndpointChatCompletions',
   responses: 'modelEndpointResponses',
-  messages: 'modelEndpointMessages'
+  messages: 'modelEndpointMessages',
+  gemini: 'modelEndpointGemini'
 }
 
 export function modelProvidersSettingsPatch(input: {

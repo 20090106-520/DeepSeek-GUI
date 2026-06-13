@@ -24,6 +24,7 @@ import {
   normalizeAppSettings,
   normalizeAppBehaviorSettings,
   normalizeKeyboardShortcuts,
+  normalizeUserPreferences,
   resolveKunRuntimeSettings,
   type AppBehaviorConfigV1,
   type AppSettingsPatch,
@@ -914,7 +915,9 @@ app.whenReady().then(async () => {
       write: mergeWriteSettings(prev.write, partial.write),
       claw: mergeClawSettings(prev.claw, partial.claw),
       schedule: mergeScheduleSettings(prev.schedule, partial.schedule),
-      guiUpdate: { ...prev.guiUpdate, ...(partial.guiUpdate ?? {}) }
+      guiUpdate: { ...prev.guiUpdate, ...(partial.guiUpdate ?? {}) },
+      agnesGeneration: { ...prev.agnesGeneration, ...(partial.agnesGeneration ?? {}) },
+      preferences: normalizeUserPreferences({ ...prev.preferences, ...(partial.preferences ?? {}) })
     })
     if (prev.log.enabled !== next.log.enabled || prev.log.retentionDays !== next.log.retentionDays) {
       configureLogger({ enabled: next.log.enabled, retentionDays: next.log.retentionDays })

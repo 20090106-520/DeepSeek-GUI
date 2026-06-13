@@ -20,6 +20,7 @@ import {
   mergeWriteSettings,
   normalizeAppBehaviorSettings,
   normalizeKeyboardShortcuts,
+  normalizeUserPreferences,
   migrateLegacyAppSettings,
   normalizeAppSettings,
   type AppSettingsPatch,
@@ -205,7 +206,11 @@ const defaultSettings = (): AppSettingsV1 => ({
   codePromptPrefix: '',
   write: defaultWriteSettings(),
   claw: defaultClawSettings(),
-  schedule: defaultScheduleSettings()
+  schedule: defaultScheduleSettings(),
+  accentColor: 'blue',
+  modelProvider: { id: 'deepseek', name: 'DeepSeek' },
+  agnesGeneration: { enabled: false, baseUrl: '', apiKey: '', imageModel: '', videoModel: '' },
+  preferences: { autoSaveHistory: true, rememberLastWorkspace: true, autoFocusInput: true, showWelcomeTips: true, compactMode: false, conversationSortOrder: 'latest', defaultCompletionMode: 'agent' }
 })
 
 function buildMergedSettings(parsed: Partial<AppSettingsV1>): AppSettingsV1 {
@@ -387,7 +392,9 @@ export class JsonSettingsStore {
       write: mergeWriteSettings(cur.write, partial.write),
       claw: mergeClawSettings(cur.claw, partial.claw),
       schedule: mergeScheduleSettings(cur.schedule, partial.schedule),
-      guiUpdate: { ...cur.guiUpdate, ...(partial.guiUpdate ?? {}) }
+      guiUpdate: { ...cur.guiUpdate, ...(partial.guiUpdate ?? {}) },
+      agnesGeneration: { ...cur.agnesGeneration, ...(partial.agnesGeneration ?? {}) },
+      preferences: normalizeUserPreferences({ ...cur.preferences, ...(partial.preferences ?? {}) })
     })
     await this.save(next)
     return next

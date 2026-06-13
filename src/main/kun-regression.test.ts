@@ -123,7 +123,11 @@ describe('Kun single-agent regression', () => {
       claw: defaultClawSettings(),
       schedule: defaultScheduleSettings(),
       guiUpdate: { channel: 'stable' },
-      codePromptPrefix: ''
+      codePromptPrefix: '',
+      accentColor: 'blue' as const,
+      modelProvider: { id: 'deepseek', name: 'DeepSeek' },
+      agnesGeneration: { enabled: false, baseUrl: '', apiKey: '', imageModel: '', videoModel: '' },
+      preferences: { autoSaveHistory: true, rememberLastWorkspace: true, autoFocusInput: true, showWelcomeTips: true, compactMode: false, conversationSortOrder: 'latest' as const, defaultCompletionMode: 'agent' as const }
     }
 
     expect(kunRuntimeAdapter.id).toBe('kun')

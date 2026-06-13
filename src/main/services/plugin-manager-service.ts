@@ -25,7 +25,7 @@ export async function listPlugins(
   try {
     const plugins: PluginInfo[] = []
     
-    const skillsResult = settings ? await listGuiSkills(settings) : { ok: false, message: 'No settings' }
+    const skillsResult = settings ? await listGuiSkills(settings) : { ok: false as const, message: 'No settings' }
     if (skillsResult.ok) {
       const skills = skillsResult.skills
       for (const skill of skills) {

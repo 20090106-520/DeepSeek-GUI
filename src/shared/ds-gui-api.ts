@@ -308,6 +308,8 @@ export type DsGuiApi = {
   togglePlugin: (payload: PluginTogglePayload) => Promise<PluginToggleResult>
   agnesGenerateImage: (payload: AgnesImageGenerationPayload) => Promise<AgnesImageGenerationResult>
   agnesGenerateVideo: (payload: AgnesVideoGenerationPayload) => Promise<AgnesVideoGenerationResult>
+  submitFeedback: (feedback: unknown) => Promise<{ ok: boolean; message?: string }>
+  lockApp: () => Promise<void>
 }
 
 export type AgnesImageGenerationPayload = {
