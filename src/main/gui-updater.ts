@@ -592,7 +592,7 @@ export async function checkGuiUpdate(channel?: GuiUpdateChannel): Promise<GuiUpd
       releaseUrl: downloadPageUrl(),
       channel: selectedChannel
     }
-    emitGuiUpdateState({ status: 'error', info, message, code: 'unknown' })
+    emitGuiUpdateState({ status: 'error', info, message: rawMessage, code: 'unknown' })
     return info
   }
 }

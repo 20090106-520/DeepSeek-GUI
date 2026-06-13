@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from 'node:net'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  DEFAULT_AGNES_GENERATION_PROVIDER,
   defaultClawSettings,
   defaultKeyboardShortcuts,
   defaultKunRuntimeSettings,
@@ -39,7 +40,7 @@ function settingsForPort(port: number): AppSettingsV1 {
     codePromptPrefix: '',
     accentColor: 'blue' as const,
     modelProvider: { id: 'deepseek', name: 'DeepSeek' },
-    agnesGeneration: { enabled: false, baseUrl: '', apiKey: '', imageModel: '', videoModel: '' },
+    agnesGeneration: { ...DEFAULT_AGNES_GENERATION_PROVIDER },
     preferences: { autoSaveHistory: true, rememberLastWorkspace: true, autoFocusInput: true, showWelcomeTips: true, compactMode: false, conversationSortOrder: 'latest' as const, defaultCompletionMode: 'agent' as const }
   }
 }

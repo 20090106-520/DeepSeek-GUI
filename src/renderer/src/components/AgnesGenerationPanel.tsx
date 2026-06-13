@@ -65,7 +65,7 @@ async function getSettingsModel(type: GenerationType): Promise<string> {
 
 async function saveModelToSettings(type: GenerationType, model: string): Promise<void> {
   try {
-    const patch = type === 'video'
+    const patch: Record<string, Record<string, string>> = type === 'video'
       ? { agnesGeneration: { videoModel: model } }
       : { agnesGeneration: { imageModel: model } }
     await window.dsGui?.setSettings(patch)

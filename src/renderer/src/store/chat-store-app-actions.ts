@@ -30,6 +30,7 @@ export function createAppActions(options: CreateAppActionsOptions): Pick<
   | 'openPlugins'
   | 'openClaw'
   | 'openSchedule'
+  | 'openDrama'
   | 'openInitialSetup'
   | 'closeInitialSetup'
   | 'selectInspectorItem'

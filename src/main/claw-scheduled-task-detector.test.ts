@@ -8,7 +8,7 @@ import {
   defaultWriteSettings,
   type AppSettingsV1,
   type ModelEndpointFormat
-} from '../shared/app-settings'
+, DEFAULT_AGNES_GENERATION_PROVIDER } from '../shared/app-settings'
 import { detectClawScheduledTaskRequest } from './claw-scheduled-task-detector'
 
 function settings(endpointFormat: ModelEndpointFormat): AppSettingsV1 {
@@ -42,7 +42,7 @@ function settings(endpointFormat: ModelEndpointFormat): AppSettingsV1 {
     codePromptPrefix: '',
     accentColor: 'blue' as const,
     modelProvider: { id: 'deepseek', name: 'DeepSeek' },
-    agnesGeneration: { enabled: false, baseUrl: '', apiKey: '', imageModel: '', videoModel: '' },
+    agnesGeneration: { ...DEFAULT_AGNES_GENERATION_PROVIDER },
     preferences: { autoSaveHistory: true, rememberLastWorkspace: true, autoFocusInput: true, showWelcomeTips: true, compactMode: false, conversationSortOrder: 'latest' as const, defaultCompletionMode: 'agent' as const }
   }
 }

@@ -5,22 +5,22 @@ describe('shouldAnimateStreamingText', () => {
   it('returns char-level animation for short single-line text', () => {
     const result = shouldAnimateStreamingText('正在检查配置。')
     expect(result).not.toBe(false)
-    expect(result.sep).toBe('char')
+    if (result !== false) expect(result.sep).toBe('char')
   })
 
   it('returns word-level animation for multiline text within limit', () => {
     const result = shouldAnimateStreamingText('First line\nSecond line')
     expect(result).not.toBe(false)
-    expect(result.sep).toBe('word')
+    if (result !== false) expect(result.sep).toBe('word')
   })
 
   it('returns word-level animation for structured markdown within limit', () => {
     const result = shouldAnimateStreamingText('- one\n- two')
     expect(result).not.toBe(false)
-    expect(result.sep).toBe('word')
+    if (result !== false) expect(result.sep).toBe('word')
     const result2 = shouldAnimateStreamingText('Use `npm test` next.')
     expect(result2).not.toBe(false)
-    expect(result2.sep).toBe('word')
+    if (result2 !== false) expect(result2.sep).toBe('word')
   })
 
   it('returns false for very long text exceeding word animation limit', () => {

@@ -32,7 +32,7 @@ import {
 type Props = {
   threads: NormalizedThread[]
   activeThreadId: string | null
-  activeView: 'chat' | 'write' | 'claw' | 'schedule' | 'drama'
+  activeView: 'chat' | 'write' | 'claw' | 'schedule' | 'drama' | 'workflow'
   connectPhoneSidebarOpen: boolean
   pluginsActive: boolean
   runtimeReady: boolean

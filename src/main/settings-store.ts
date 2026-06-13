@@ -26,7 +26,8 @@ import {
   type AppSettingsPatch,
   type AppSettingsV1,
   type ClawImChannelV1,
-  type ClawImConversationV1
+  type ClawImConversationV1,
+  DEFAULT_AGNES_GENERATION_PROVIDER
 } from '../shared/app-settings'
 
 export type { AppSettingsV1 }
@@ -209,7 +210,7 @@ const defaultSettings = (): AppSettingsV1 => ({
   schedule: defaultScheduleSettings(),
   accentColor: 'blue',
   modelProvider: { id: 'deepseek', name: 'DeepSeek' },
-  agnesGeneration: { enabled: false, baseUrl: 'https://apihub.agnes-ai.com', apiKey: '', imageModel: 'agnes-image-2.1-flash', videoModel: 'agnes-video-v2.0' },
+  agnesGeneration: { ...DEFAULT_AGNES_GENERATION_PROVIDER },
   preferences: { autoSaveHistory: true, rememberLastWorkspace: true, autoFocusInput: true, showWelcomeTips: true, compactMode: false, conversationSortOrder: 'latest', defaultCompletionMode: 'agent' }
 })
 

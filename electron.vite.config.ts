@@ -6,7 +6,7 @@ import react from '@vitejs/plugin-react'
 function copyStaticFile(from: string, to: string) {
   return {
     name: 'copy-static-file',
-    generateBundle() {
+    generateBundle(this: any) {
       const source = readFileSync(from)
       this.emitFile({ type: 'asset', fileName: to, source })
     }
@@ -16,7 +16,9 @@ function copyStaticFile(from: string, to: string) {
 export default defineConfig({
   main: {
     plugins: [
-      externalizeDepsPlugin(),
+      externalizeDepsPlugin({
+        exclude: ['react', 'react-dom', 'react-dom/server', 'react-markdown', 'remark-gfm', 'rehype-raw']
+      }),
       copyStaticFile(resolve('src/main/public/splash.html'), 'splash.html')
     ],
     build: {
@@ -24,6 +26,10 @@ export default defineConfig({
         input: {
           index: resolve('src/main/index.ts'),
           'claw-schedule-mcp-node-entry': resolve('src/main/claw-schedule-mcp-node-entry.ts')
+        },
+        output: {
+          format: 'cjs',
+          entryFileNames: '[name].cjs'
         }
       }
     }

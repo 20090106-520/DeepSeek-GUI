@@ -2,6 +2,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  DEFAULT_AGNES_GENERATION_PROVIDER,
   defaultClawSettings,
   defaultKeyboardShortcuts,
   defaultKunRuntimeSettings,
@@ -11,6 +12,7 @@ import {
   type AppSettingsV1
 } from '@shared/app-settings'
 import { ClawSettingsSection } from './settings-section-claw'
+
 
 const labels: Record<string, string> = {
   clawRuntime: 'Phone connection',
@@ -71,7 +73,7 @@ function buildSettings(): AppSettingsV1 {
     codePromptPrefix: '',
     accentColor: 'blue',
     modelProvider: { id: 'deepseek', name: 'DeepSeek' },
-    agnesGeneration: { enabled: false, baseUrl: '', apiKey: '', imageModel: '', videoModel: '' },
+    agnesGeneration: { ...DEFAULT_AGNES_GENERATION_PROVIDER },
     preferences: { autoSaveHistory: true, rememberLastWorkspace: true, autoFocusInput: true, showWelcomeTips: true, compactMode: false, conversationSortOrder: 'latest', defaultCompletionMode: 'agent' }
   }
   settings.claw.enabled = true

@@ -12,7 +12,7 @@ import {
   defaultScheduleSettings,
   defaultWriteSettings,
   type AppSettingsV1
-} from '../shared/app-settings'
+, DEFAULT_AGNES_GENERATION_PROVIDER } from '../shared/app-settings'
 import { KunConfigSchema } from '../../kun/src/config/kun-config.js'
 
 vi.mock('electron', () => ({
@@ -51,7 +51,7 @@ function createSettings(binaryPath: string): AppSettingsV1 {
     codePromptPrefix: '',
     accentColor: 'blue' as const,
     modelProvider: { id: 'deepseek', name: 'DeepSeek' },
-    agnesGeneration: { enabled: false, baseUrl: '', apiKey: '', imageModel: '', videoModel: '' },
+    agnesGeneration: { ...DEFAULT_AGNES_GENERATION_PROVIDER },
     preferences: { autoSaveHistory: true, rememberLastWorkspace: true, autoFocusInput: true, showWelcomeTips: true, compactMode: false, conversationSortOrder: 'latest' as const, defaultCompletionMode: 'agent' as const }
   }
 }

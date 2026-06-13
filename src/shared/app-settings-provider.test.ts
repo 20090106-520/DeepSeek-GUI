@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DEFAULT_AGNES_GENERATION_PROVIDER,
   defaultClawSettings,
   defaultKeyboardShortcuts,
   defaultKunRuntimeSettings,
@@ -49,7 +50,7 @@ function settings(): AppSettingsV1 {
     codePromptPrefix: '',
     accentColor: 'blue',
     modelProvider: { id: 'deepseek', name: 'DeepSeek' },
-    agnesGeneration: { enabled: false, baseUrl: '', apiKey: '', imageModel: '', videoModel: '' },
+    agnesGeneration: { ...DEFAULT_AGNES_GENERATION_PROVIDER },
     preferences: { autoSaveHistory: true, rememberLastWorkspace: true, autoFocusInput: true, showWelcomeTips: true, compactMode: false, conversationSortOrder: 'latest', defaultCompletionMode: 'agent' }
   }
 }
