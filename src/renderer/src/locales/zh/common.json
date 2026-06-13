@@ -1508,5 +1508,14 @@
   "computerUseCapMouse": "鼠标控制",
   "computerUseCapKeyboard": "键盘输入",
   "computerUseCapScreen": "屏幕读取",
-  "computerUseToolWarning": "桌面控制操作 — AI 正在控制你的鼠标或键盘，请注意安全"
+  "computerUseToolWarning": "桌面控制操作 — AI 正在控制你的鼠标或键盘，请注意安全",
+  "appErrorReport": "报告问题",
+  "errorFriendlyNetwork": "网络连接似乎出了问题，请检查网络后重试。",
+  "errorFriendlyApi": "服务端暂时无法响应，请稍后再试。",
+  "errorFriendlyValidation": "提交的数据格式有误，请检查后重试。",
+  "errorFriendlyRuntime": "本地运行时遇到了问题，请检查设置或重启应用。",
+  "errorFriendlyAuth": "认证信息无效或已过期，请检查 API 密钥设置。",
+  "errorFriendlyResource": "请求的资源不存在或已被移除。",
+  "errorFriendlyUnknown": "应用遇到了一个意外错误，你可以报告此问题帮助我们改进。",
+  "feedback": "反馈"
 }

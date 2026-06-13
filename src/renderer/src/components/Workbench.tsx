@@ -1530,6 +1530,10 @@ export function Workbench(): ReactElement {
       }
       onOpenSettings={() => openSettings('agents')}
       onRetryConnection={() => void probeRuntime('user')}
+      onReportError={() => {
+        const reportBody = detail ? `${message}\n\n${detail}` : message
+        window.location.hash = `#/settings/general?feedbackType=bug&feedbackTitle=${encodeURIComponent(`[Bug] ${message}`)}&feedbackDescription=${encodeURIComponent(reportBody)}`
+      }}
     />
   )
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Send, CheckCircle, XCircle, Star } from 'lucide-react'
@@ -20,6 +20,24 @@ export function FeedbackForm(): ReactElement {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    try {
+      const hash = window.location.hash
+      const params = new URLSearchParams(hash.split('?')[1] ?? '')
+      const ft = params.get('feedbackType')
+      const fti = params.get('feedbackTitle')
+      const fd = params.get('feedbackDescription')
+      if (ft && ['bug', 'feature', 'improvement', 'question', 'other'].includes(ft)) {
+        setType(ft as FeedbackType)
+      }
+      if (fti) setTitle(decodeURIComponent(fti))
+      if (fd) setDescription(decodeURIComponent(fd))
+      if (ft || fti || fd) {
+        window.location.hash = '#/settings/general'
+      }
+    } catch {}
+  }, [])
 
   const handleSubmit = async () => {
     if (!title.trim() || !description.trim()) {

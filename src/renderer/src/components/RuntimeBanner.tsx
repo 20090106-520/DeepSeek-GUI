@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, Copy, FolderOpen } from 'lucide-react'
+import { ChevronDown, ChevronRight, Copy, FolderOpen, MessageSquareWarning } from 'lucide-react'
+import { globalErrorHandler, getFriendlyErrorKey } from '../lib/error-handler'
 
 export function RuntimeBanner({
   message,
@@ -10,6 +11,7 @@ export function RuntimeBanner({
   onOpenLogDir,
   onOpenSettings,
   onRetryConnection,
+  onReportError,
   runtimeReady,
   stageInsetClass,
   t
@@ -21,6 +23,7 @@ export function RuntimeBanner({
   onOpenLogDir?: () => Promise<{ ok: boolean; message?: string }>
   onOpenSettings: () => void
   onRetryConnection: () => void
+  onReportError?: () => void
   runtimeReady: boolean
   stageInsetClass: string
   t: (key: string) => string
@@ -29,6 +32,8 @@ export function RuntimeBanner({
   const [copied, setCopied] = useState(false)
   const [logOpenError, setLogOpenError] = useState<string | null>(null)
   const cleanedLogPath = logPath?.trim() ?? ''
+  const friendlyKey = code ? getFriendlyErrorKey(globalErrorHandler.captureError(new Error(code)).category) : ''
+  const friendlyText = friendlyKey ? t(friendlyKey) : ''
   const technicalDetailText = [
     code ? `Code: ${code}` : '',
     detail?.trim() ?? ''
@@ -61,9 +66,16 @@ export function RuntimeBanner({
     <div className="ds-no-drag shrink-0 border-b border-amber-200/70 bg-[rgba(255,248,235,0.82)] backdrop-blur-lg dark:border-amber-800/50 dark:bg-amber-950/35">
       <div className={`${stageInsetClass} flex w-full min-w-0 flex-col gap-2 py-3`}>
         <div className="flex w-full min-w-0 items-start justify-between gap-3">
-          <p className="min-w-0 flex-1 text-[14px] leading-6 text-amber-950 dark:text-amber-100">
-            {message}
-          </p>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] leading-6 text-amber-950 dark:text-amber-100">
+              {message}
+            </p>
+            {friendlyText ? (
+              <p className="mt-0.5 text-[12px] leading-4 text-amber-800/70 dark:text-amber-200/70">
+                {friendlyText}
+              </p>
+            ) : null}
+          </div>
           <div className="flex shrink-0 items-center gap-2">
             {hasDetail ? (
               <button
@@ -96,6 +108,16 @@ export function RuntimeBanner({
                   {t('openSettings')}
                 </button>
               </>
+            ) : null}
+            {onReportError ? (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[12px] font-medium text-amber-900/80 transition hover:bg-amber-50/70 dark:text-amber-100 dark:hover:bg-amber-900/30"
+                onClick={onReportError}
+              >
+                <MessageSquareWarning className="h-3.5 w-3.5" strokeWidth={2} />
+                {t('appErrorReport')}
+              </button>
             ) : null}
           </div>
         </div>

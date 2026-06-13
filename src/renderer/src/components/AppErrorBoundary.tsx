@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { MessageSquareWarning } from 'lucide-react'
 import i18n from '../i18n'
-import { globalErrorHandler, type ErrorContext } from '../lib/error-handler'
+import { globalErrorHandler, type ErrorContext, getFriendlyErrorKey, getErrorReportBody } from '../lib/error-handler'
 
 type Props = {
   children: ReactNode
@@ -54,11 +55,22 @@ export class AppErrorBoundary extends Component<Props, State> {
     this.setState({ error: null, errorContext: null })
   }
 
+  private handleReport = (): void => {
+    const { error, errorContext } = this.state
+    const reportBody = getErrorReportBody(error, errorContext)
+    const categoryKey = errorContext?.category ? getFriendlyErrorKey(errorContext.category) : ''
+    const categoryLabel = categoryKey ? i18n.t(categoryKey) : ''
+    const title = error?.message ? `[Bug] ${error.message}` : '[Bug] Application error'
+    const description = `${categoryLabel}\n\n${reportBody}`
+    window.location.hash = `#/settings/general?feedbackType=bug&feedbackTitle=${encodeURIComponent(title)}&feedbackDescription=${encodeURIComponent(description)}`
+  }
+
   override render(): ReactNode {
     if (!this.state.error) return this.props.children
 
     const { errorContext } = this.state
     const canRetry = errorContext?.retryable && this.retryCount < this.maxRetries
+    const friendlyKey = errorContext?.category ? getFriendlyErrorKey(errorContext.category) : ''
 
     return (
       <div className="flex h-full min-h-0 flex-col items-center justify-center bg-ds-main px-6">
@@ -66,15 +78,20 @@ export class AppErrorBoundary extends Component<Props, State> {
           <h2 className="text-[16px] font-semibold text-amber-900 dark:text-amber-100">
             {i18n.t('appErrorTitle')}
           </h2>
-          <p className="mt-2 text-[13px] leading-5 text-amber-800/80 dark:text-amber-100/80">
+          {friendlyKey && (
+            <p className="mt-2 text-[13px] leading-5 text-amber-800/90 dark:text-amber-100/90">
+              {i18n.t(friendlyKey)}
+            </p>
+          )}
+          <p className="mt-1 text-[12px] leading-4 text-amber-700/70 dark:text-amber-200/70">
             {this.state.error.message || String(this.state.error)}
           </p>
           {errorContext?.category && (
-            <p className="mt-1 text-[12px] text-amber-700/70 dark:text-amber-200/70">
+            <p className="mt-1 text-[11px] text-amber-700/50 dark:text-amber-200/50">
               {i18n.t(`errorCategory${errorContext.category.charAt(0).toUpperCase() + errorContext.category.slice(1)}`)}
             </p>
           )}
-          <div className="mt-4 flex gap-3 justify-center">
+          <div className="mt-4 flex gap-3 justify-center flex-wrap">
             {canRetry && (
               <button
                 type="button"
@@ -84,6 +101,14 @@ export class AppErrorBoundary extends Component<Props, State> {
                 {i18n.t('appErrorRetry')} ({this.maxRetries - this.retryCount})
               </button>
             )}
+            <button
+              type="button"
+              onClick={this.handleReport}
+              className="inline-flex items-center gap-1.5 rounded-full bg-amber-900/10 px-5 py-2 text-[13px] font-medium text-amber-900 transition hover:bg-amber-900/20 dark:bg-amber-100/10 dark:text-amber-100 dark:hover:bg-amber-100/20"
+            >
+              <MessageSquareWarning className="h-3.5 w-3.5" strokeWidth={2} />
+              {i18n.t('appErrorReport')}
+            </button>
             <button
               type="button"
               onClick={this.handleReload}

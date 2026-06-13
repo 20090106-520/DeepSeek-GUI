@@ -154,4 +154,35 @@ export class ErrorBoundaryHandler {
   }
 }
 
+export const FRIENDLY_ERROR_MAP: Record<ErrorCategory, string> = {
+  network: 'errorFriendlyNetwork',
+  api: 'errorFriendlyApi',
+  validation: 'errorFriendlyValidation',
+  runtime: 'errorFriendlyRuntime',
+  authentication: 'errorFriendlyAuth',
+  resource: 'errorFriendlyResource',
+  unknown: 'errorFriendlyUnknown'
+}
+
+export function getFriendlyErrorKey(category: ErrorCategory): string {
+  return FRIENDLY_ERROR_MAP[category] ?? FRIENDLY_ERROR_MAP.unknown
+}
+
+export function getErrorReportBody(error: Error | null, errorContext: ErrorContext | null): string {
+  const parts: string[] = []
+  if (errorContext?.category) {
+    parts.push(`Category: ${errorContext.category}`)
+  }
+  if (error?.message) {
+    parts.push(`Error: ${error.message}`)
+  }
+  if (error?.stack) {
+    parts.push(`Stack:\n${error.stack}`)
+  }
+  if (errorContext?.metadata?.componentStack) {
+    parts.push(`Component Stack:\n${String(errorContext.metadata.componentStack)}`)
+  }
+  return parts.join('\n\n')
+}
+
 export const globalErrorHandler = new ErrorBoundaryHandler()

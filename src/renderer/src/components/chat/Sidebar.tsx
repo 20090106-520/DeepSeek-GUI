@@ -6,6 +6,7 @@ import {
   Clapperboard,
   FileQuestion,
   LayoutGrid,
+  MessageSquareWarning,
   Plus,
   Settings,
   Smartphone,
@@ -125,6 +126,12 @@ export function Sidebar({
             label={t('claw')}
             onClick={onToggleConnectPhone}
             active={connectPhoneSidebarOpen}
+            variant="footer"
+          />
+          <SidebarCommandRow
+            icon={<MessageSquareWarning className="h-4 w-4" strokeWidth={1.75} />}
+            label={t('feedback')}
+            onClick={() => onOpenSettings('general')}
             variant="footer"
           />
           <SidebarCommandRow

@@ -1508,5 +1508,14 @@
   "computerUseCapMouse": "Mouse Control",
   "computerUseCapKeyboard": "Keyboard Input",
   "computerUseCapScreen": "Screen Reading",
-  "computerUseToolWarning": "Desktop control — AI is controlling your mouse or keyboard, stay alert"
+  "computerUseToolWarning": "Desktop control — AI is controlling your mouse or keyboard, stay alert",
+  "appErrorReport": "Report Issue",
+  "errorFriendlyNetwork": "A network issue occurred. Please check your connection and try again.",
+  "errorFriendlyApi": "The server is temporarily unavailable. Please try again later.",
+  "errorFriendlyValidation": "The submitted data is invalid. Please check and retry.",
+  "errorFriendlyRuntime": "The local runtime encountered a problem. Check settings or restart the app.",
+  "errorFriendlyAuth": "Authentication failed or expired. Please check your API key settings.",
+  "errorFriendlyResource": "The requested resource does not exist or has been removed.",
+  "errorFriendlyUnknown": "An unexpected error occurred. You can report this issue to help us improve.",
+  "feedback": "Feedback"
 }
