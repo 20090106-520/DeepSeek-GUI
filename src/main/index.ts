@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, Notification, powerSaveBlocker, Tray } from 'electron'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import {
   JsonSettingsStore,
@@ -902,6 +903,27 @@ app.whenReady().then(async () => {
   await syncClawScheduleMcpConfig(initial, getClawScheduleMcpLaunchConfig()).catch((error) => {
     console.error('[claw-schedule-mcp] failed to sync config on startup:', error)
   })
+
+  try {
+    const mcpJsonPath = join(homedir(), '.kun', 'mcp.json')
+    if (existsSync(mcpJsonPath)) {
+      const mcpRaw = readFileSync(mcpJsonPath, 'utf8')
+      const mcpJson = JSON.parse(mcpRaw) as Record<string, unknown>
+      const servers = mcpJson.servers as Record<string, unknown> | undefined
+      if (servers?.['computer-use']) {
+        const cu = servers['computer-use'] as { args?: string[] }
+        if (cu.args && cu.args.some((a: string) => a.includes('@anthropic-ai/computer-use-mcp'))) {
+          cu.args = cu.args.map((a: string) =>
+            a.replace('@anthropic-ai/computer-use-mcp', 'computer-use-mcp')
+          )
+          writeFileSync(mcpJsonPath, JSON.stringify(mcpJson, null, 2), 'utf8')
+          console.info('[mcp-migration] migrated computer-use package name')
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[mcp-migration] failed to migrate computer-use config:', e)
+  }
 
   logDir = resolveLogDirectory()
   configureLogger({
