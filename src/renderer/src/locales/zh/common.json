@@ -1486,5 +1486,9 @@
   "modelMarketCat_code": "编程",
   "modelMarketCat_vision": "视觉",
   "modelMarketCat_video": "视频",
-  "modelMarketCat_reasoning": "推理"
+  "modelMarketCat_reasoning": "推理",
+  "modelMarketTestBtn": "测试",
+  "modelMarketTestTesting": "测试中",
+  "modelMarketTestSuccess": "连接成功 · {{count}} 个模型 · {{latency}}ms",
+  "modelMarketTestModelCount": "{{count}} 个模型可用"
 }

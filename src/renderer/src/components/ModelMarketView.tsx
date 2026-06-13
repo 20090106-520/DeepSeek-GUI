@@ -9,16 +9,16 @@ import {
   Video,
   Code,
   MessageSquare,
-  Globe,
-  Shield,
-  Star,
   Check,
-  ChevronRight,
   Sparkles,
   Layers,
   Gauge,
-  BookOpen,
-  ArrowRight
+  Loader2,
+  RefreshCw,
+  CheckCircle,
+  XCircle,
+  Wifi,
+  WifiOff
 } from 'lucide-react'
 import { PRESET_PROVIDERS, type PresetProviderId } from '@shared/app-settings-provider'
 import { useChatStore } from '../store/chat-store'
@@ -35,6 +35,13 @@ type ModelMeta = {
   paramSize: string
   description: string
   free: boolean
+}
+
+type ProviderTestStatus = {
+  status: 'idle' | 'testing' | 'success' | 'error'
+  modelCount?: number
+  latencyMs?: number
+  message?: string
 }
 
 const MODEL_META: Record<string, Partial<ModelMeta>> = {
@@ -175,6 +182,7 @@ export function ModelMarketView(): ReactElement {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<ModelCategory>('all')
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
+  const [providerTests, setProviderTests] = useState<Record<string, ProviderTestStatus>>({})
 
   const filteredModels = useMemo(() => {
     let result = ALL_MODELS
@@ -201,13 +209,60 @@ export function ModelMarketView(): ReactElement {
       id,
       name: provider.name,
       icon: PROVIDER_ICONS[id] ?? '🤖',
-      modelCount: provider.models.length
+      modelCount: provider.models.length,
+      baseUrl: provider.baseUrl
     }))
   }, [])
 
   const handleSelectModel = useCallback((modelId: string) => {
     setComposerModel(modelId)
   }, [setComposerModel])
+
+  const handleTestProvider = useCallback(async (providerId: string) => {
+    setProviderTests((prev) => ({
+      ...prev,
+      [providerId]: { status: 'testing' }
+    }))
+    const start = Date.now()
+    try {
+      const response = await window.dsGui.fetchUpstreamModels()
+      const latencyMs = Date.now() - start
+      if (response.ok) {
+        const matchingModels = response.modelIds.filter((id) => {
+          const preset = PRESET_PROVIDERS[providerId as PresetProviderId]
+          return preset?.models.includes(id)
+        })
+        setProviderTests((prev) => ({
+          ...prev,
+          [providerId]: {
+            status: 'success',
+            modelCount: response.modelIds.length,
+            latencyMs,
+            message: t('modelMarketTestSuccess', { count: response.modelIds.length, latency: latencyMs })
+          }
+        }))
+      } else {
+        setProviderTests((prev) => ({
+          ...prev,
+          [providerId]: {
+            status: 'error',
+            latencyMs,
+            message: response.message
+          }
+        }))
+      }
+    } catch (error) {
+      const latencyMs = Date.now() - start
+      setProviderTests((prev) => ({
+        ...prev,
+        [providerId]: {
+          status: 'error',
+          latencyMs,
+          message: error instanceof Error ? error.message : String(error)
+        }
+      }))
+    }
+  }, [t])
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-ds-main">
@@ -266,23 +321,61 @@ export function ModelMarketView(): ReactElement {
           <div className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wider text-ds-secondary-text">
             {t('modelMarketProviders')}
           </div>
-          {providerList.map((provider) => (
-            <button
-              key={provider.id}
-              onClick={() => setSelectedProvider(selectedProvider === provider.id ? null : provider.id)}
-              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors ${
-                selectedProvider === provider.id
-                  ? 'bg-violet-500/10 text-violet-700 dark:text-violet-300'
-                  : 'text-ds-primary-text hover:bg-ds-hover'
-              }`}
-            >
-              <span className="text-base">{provider.icon}</span>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-xs font-medium">{provider.name}</div>
-                <div className="text-[10px] text-ds-secondary-text">{provider.modelCount} {t('modelMarketModelCount')}</div>
+          {providerList.map((provider) => {
+            const testStatus = providerTests[provider.id]
+            return (
+              <div key={provider.id} className="mb-0.5">
+                <button
+                  onClick={() => setSelectedProvider(selectedProvider === provider.id ? null : provider.id)}
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors ${
+                    selectedProvider === provider.id
+                      ? 'bg-violet-500/10 text-violet-700 dark:text-violet-300'
+                      : 'text-ds-primary-text hover:bg-ds-hover'
+                  }`}
+                >
+                  <span className="text-base">{provider.icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-xs font-medium">{provider.name}</div>
+                    <div className="text-[10px] text-ds-secondary-text">{provider.modelCount} {t('modelMarketModelCount')}</div>
+                  </div>
+                  {testStatus?.status === 'success' && (
+                    <Wifi className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                  )}
+                  {testStatus?.status === 'error' && (
+                    <WifiOff className="h-3.5 w-3.5 shrink-0 text-rose-500" />
+                  )}
+                </button>
+                <div className="flex items-center gap-1 px-2.5 pb-1">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleTestProvider(provider.id) }}
+                    disabled={testStatus?.status === 'testing'}
+                    className="flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-medium text-ds-secondary-text transition-colors hover:bg-ds-hover hover:text-ds-primary-text disabled:opacity-50"
+                  >
+                    {testStatus?.status === 'testing' ? (
+                      <><Loader2 className="h-3 w-3 animate-spin" />{t('modelMarketTestTesting')}</>
+                    ) : (
+                      <><RefreshCw className="h-3 w-3" />{t('modelMarketTestBtn')}</>
+                    )}
+                  </button>
+                  {testStatus?.status === 'success' && testStatus.latencyMs && (
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400">{testStatus.latencyMs}ms</span>
+                  )}
+                </div>
+                {testStatus?.status === 'success' && testStatus.modelCount !== undefined && (
+                  <div className="mx-2.5 mb-1 flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-1 text-[10px] text-emerald-700 dark:text-emerald-300">
+                    <CheckCircle className="h-3 w-3" />
+                    {t('modelMarketTestModelCount', { count: testStatus.modelCount })}
+                  </div>
+                )}
+                {testStatus?.status === 'error' && testStatus.message && (
+                  <div className="mx-2.5 mb-1 flex items-start gap-1 rounded bg-rose-500/10 px-2 py-1 text-[10px] text-rose-700 dark:text-rose-300">
+                    <XCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                    <span className="line-clamp-2">{testStatus.message}</span>
+                  </div>
+                )}
               </div>
-            </button>
-          ))}
+            )
+          })}
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">

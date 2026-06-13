@@ -1486,5 +1486,9 @@
   "modelMarketCat_code": "Code",
   "modelMarketCat_vision": "Vision",
   "modelMarketCat_video": "Video",
-  "modelMarketCat_reasoning": "Reasoning"
+  "modelMarketCat_reasoning": "Reasoning",
+  "modelMarketTestBtn": "Test",
+  "modelMarketTestTesting": "Testing",
+  "modelMarketTestSuccess": "Connected · {{count}} models · {{latency}}ms",
+  "modelMarketTestModelCount": "{{count}} models available"
 }
