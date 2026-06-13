@@ -118,10 +118,22 @@ export function normalizeAppBehaviorSettings(
 export function normalizeAgnesGenerationSettings(
   settings?: Partial<AgnesGenerationProviderV1>
 ): AgnesGenerationProviderV1 {
-  return {
+  const merged = {
     ...DEFAULT_AGNES_GENERATION_PROVIDER,
     ...settings
   }
+  const legacyImageModels = ['stabilityai/stable-diffusion-3-5-large', 'stabilityai/stable-diffusion-xl-base-1.0']
+  if (legacyImageModels.includes(merged.imageModel)) {
+    merged.imageModel = DEFAULT_AGNES_GENERATION_PROVIDER.imageModel
+  }
+  const legacyVideoModels = ['tencent/HunyuanVideo']
+  if (legacyVideoModels.includes(merged.videoModel)) {
+    merged.videoModel = DEFAULT_AGNES_GENERATION_PROVIDER.videoModel
+  }
+  if (merged.baseUrl === 'https://api.siliconflow.cn/v1') {
+    merged.baseUrl = DEFAULT_AGNES_GENERATION_PROVIDER.baseUrl
+  }
+  return merged
 }
 
 export function normalizeModelProviderSelection(

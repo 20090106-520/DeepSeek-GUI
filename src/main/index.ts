@@ -652,7 +652,8 @@ function createSplashWindow(): BrowserWindow {
     width: 420,
     height: 320,
     frame: false,
-    transparent: true,
+    transparent: false,
+    backgroundColor: '#0a0e1a',
     resizable: false,
     show: false,
     alwaysOnTop: true,
@@ -660,7 +661,7 @@ function createSplashWindow(): BrowserWindow {
     skipTaskbar: true,
     webPreferences: {
       contextIsolation: true,
-      sandbox: true
+      sandbox: false
     }
   })
   splash.loadFile(join(__dirname, 'splash.html'))
