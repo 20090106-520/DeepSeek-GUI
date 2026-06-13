@@ -37,6 +37,37 @@ import {
   syncTurnCompletionPoll as syncTurnCompletionPollImpl
 } from './chat-store-schedulers'
 
+const REPEATED_BLOCK_MIN_OCCURRENCES = 3
+const REPEATED_BLOCK_PATTERN = /(<[a-zA-Z_][\w-]*(?:\s[^>]*)?>[\s\S]*?<\/[a-zA-Z_][\w-]*>)(\s*\1)*/g
+
+function deduplicateRepeatedBlocks(text: string): string {
+  if (!text || text.length < 20) return text
+  const seen = new Map<string, { first: string; count: number }>()
+  const replacements: Array<{ match: string; replacement: string }> = []
+  for (const match of text.matchAll(REPEATED_BLOCK_PATTERN)) {
+    const full = match[0]
+    const single = match[1]
+    if (!single || single.length < 4) continue
+    const existing = seen.get(single)
+    if (existing) {
+      existing.count += 1
+      continue
+    }
+    const repeatCount = (full.length / single.length) | 0
+    if (repeatCount < REPEATED_BLOCK_MIN_OCCURRENCES) continue
+    seen.set(single, { first: single, count: repeatCount })
+    replacements.push({
+      match: full,
+      replacement: `${single}\n[... repeated ${repeatCount - 1} time(s) ...]`
+    })
+  }
+  let result = text
+  for (const { match, replacement } of replacements) {
+    result = result.replace(match, replacement)
+  }
+  return result
+}
+
 const BUSY_WATCHDOG_MS = 180_000
 const MAX_BUSY_RECOVERY_ATTEMPTS = 3
 const MAX_RUNTIME_EVENT_TIMER_AGE_MS = 30 * 60_000
@@ -307,10 +338,10 @@ export function flushLiveBlocks(state: ChatState, base: Partial<ChatState> = {})
   const now = Date.now()
   const createdAt = new Date(now).toISOString()
   if (state.liveReasoning.trim()) {
-    nextBlocks.push({ kind: 'reasoning', id: `r-${now}`, createdAt, text: state.liveReasoning })
+    nextBlocks.push({ kind: 'reasoning', id: `r-${now}`, createdAt, text: deduplicateRepeatedBlocks(state.liveReasoning) })
   }
   if (state.liveAssistant.trim()) {
-    nextBlocks.push({ kind: 'assistant', id: `a-${now}`, createdAt, text: state.liveAssistant })
+    nextBlocks.push({ kind: 'assistant', id: `a-${now}`, createdAt, text: deduplicateRepeatedBlocks(state.liveAssistant) })
   }
   if (nextBlocks.length === state.blocks.length) return base
   return {

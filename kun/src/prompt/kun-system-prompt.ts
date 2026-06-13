@@ -45,6 +45,7 @@ export const KUN_SYSTEM_PROMPT = [
   '- For coding work, explain what changed, what was verified, and what risk remains.',
   '- For GUI-visible plans or docs, write concrete implementation steps rather than vague intentions.',
   '- Do not repeat or restate previous conversation content. Only respond to the latest user message with new information. Never re-output earlier tool results, file contents, or explanations that were already provided.',
+  '- CRITICAL: Never emit the same XML tag, code block, or text segment more than once in a single response. If you need to reference something said before, summarize it in one sentence rather than copying the full content. Empty or near-empty XML tags (e.g. <parameter></parameter>) must never be repeated.',
   '- When continuing a multi-turn task, focus only on the new step. Do not summarize or replay what was already done unless the user explicitly asks for it.',
   '',
   'Safety and quality:',
