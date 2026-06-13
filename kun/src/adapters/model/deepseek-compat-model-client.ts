@@ -172,8 +172,9 @@ export class DeepseekCompatModelClient implements ModelClient {
     let response = result.response
     if (!response.ok) {
       const text = await response.text()
-      if (endpointFormat === 'chat_completions' && shouldRetryWithoutStreamUsage(response.status, text, body)) {
-        const retryBody = this.buildRequestBody(request, stream, { includeStreamUsage: false })
+      const retryHint = endpointFormat === 'chat_completions' ? shouldRetryWithoutDeepSeekExtensions(response.status, text, body) : null
+      if (retryHint) {
+        const retryBody = this.buildRequestBody(request, stream, { includeStreamUsage: false, strictCompat: true })
         const retry = await this.postChatCompletion(url, headers, retryBody, request.abortSignal)
         if (retry.kind === 'error') {
           yield { kind: 'error', message: retry.message }
@@ -290,7 +291,7 @@ export class DeepseekCompatModelClient implements ModelClient {
   private buildRequestBody(
     request: ModelRequest,
     stream: boolean,
-    options: { includeStreamUsage?: boolean } = {}
+    options: { includeStreamUsage?: boolean; strictCompat?: boolean } = {}
   ): Record<string, unknown> {
     const requestModel = request.model?.trim()
     const model = requestModel || this.config.model
@@ -322,18 +323,25 @@ export class DeepseekCompatModelClient implements ModelClient {
     if (request.responseFormat === 'json_object') {
       body.response_format = { type: 'json_object' }
     }
-    if (stream && options.includeStreamUsage !== false) {
+    const isDeepSeek = isDeepSeekHost(this.config.baseUrl)
+    const isAzure = isAzureOpenAiEndpoint(this.config.baseUrl)
+    const isAgnes = isAgnesHost(this.config.baseUrl)
+    const strictCompat = options.strictCompat === true
+    if (stream && options.includeStreamUsage !== false && !strictCompat && (isDeepSeek || isOpenAiCompatHost(this.config.baseUrl))) {
       body.stream_options = { include_usage: true }
     }
-    const includeThinking = !isAzureOpenAiEndpoint(this.config.baseUrl)
+    const includeThinking = !isAzure && isDeepSeek && !strictCompat
     applyReasoningEffort(body, request.reasoningEffort, { includeThinking })
     if (
       includeThinking &&
-      isDeepSeekHost(this.config.baseUrl) &&
+      isDeepSeek &&
       !Object.prototype.hasOwnProperty.call(body, 'thinking') &&
       isThinkingProducerModel(model)
     ) {
       body.thinking = { type: 'enabled' }
+    }
+    if (isAgnes && !strictCompat && isThinkingMode(request.reasoningEffort)) {
+      body.chat_template_kwargs = { enable_thinking: true }
     }
     const tools = normalizeToolSpecs(request.tools)
     if (tools.length > 0) {
@@ -1765,14 +1773,18 @@ function applyReasoningEffort(
   }
 }
 
-function shouldRetryWithoutStreamUsage(
+function shouldRetryWithoutDeepSeekExtensions(
   status: number,
   text: string,
   body: Record<string, unknown>
 ): boolean {
   if (status !== 400 && status !== 422) return false
-  if (!Object.prototype.hasOwnProperty.call(body, 'stream_options')) return false
-  return /\b(stream_options|include_usage)\b/i.test(text)
+  const hasExtensions =
+    Object.prototype.hasOwnProperty.call(body, 'stream_options') ||
+    Object.prototype.hasOwnProperty.call(body, 'reasoning_effort') ||
+    Object.prototype.hasOwnProperty.call(body, 'thinking')
+  if (!hasExtensions) return false
+  return /\b(stream_options|include_usage|reasoning_effort|thinking)\b/i.test(text)
 }
 
 function isAzureOpenAiEndpoint(baseUrl: string): boolean {
@@ -1782,6 +1794,25 @@ function isAzureOpenAiEndpoint(baseUrl: string): boolean {
     return host.endsWith('.openai.azure.com') || host.endsWith('.cognitiveservices.azure.com')
   } catch {
     return /\.openai\.azure\.com\b|\.cognitiveservices\.azure\.com\b/i.test(baseUrl)
+  }
+}
+
+function isOpenAiCompatHost(baseUrl: string): boolean {
+  try {
+    const host = new URL(baseUrl).hostname.toLowerCase()
+    return host === 'api.openai.com' || host.endsWith('.openai.com') ||
+      host === 'openrouter.ai' || host.endsWith('.openrouter.ai')
+  } catch {
+    return false
+  }
+}
+
+function isAgnesHost(baseUrl: string): boolean {
+  try {
+    const host = new URL(baseUrl).hostname.toLowerCase()
+    return host === 'apihub.agnes-ai.com' || host.endsWith('.agnes-ai.com')
+  } catch {
+    return false
   }
 }
 
