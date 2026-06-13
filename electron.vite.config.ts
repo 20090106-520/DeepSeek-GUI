@@ -46,6 +46,21 @@ export default defineConfig({
         '@shared': resolve('src/shared')
       }
     },
-    plugins: [react()]
+    plugins: [react()],
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'zustand', 'react-i18next', 'i18next', 'lucide-react'],
+      exclude: ['@tencent-weixin/openclaw-weixin']
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom'],
+            i18n: ['react-i18next', 'i18next'],
+            ui: ['lucide-react']
+          }
+        }
+      }
+    }
   }
 })
