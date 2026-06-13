@@ -925,6 +925,30 @@ app.whenReady().then(async () => {
     console.warn('[mcp-migration] failed to migrate computer-use config:', e)
   }
 
+  try {
+    const mcpJsonPath = join(homedir(), '.kun', 'mcp.json')
+    if (existsSync(mcpJsonPath)) {
+      const mcpRaw = readFileSync(mcpJsonPath, 'utf8')
+      const mcpJson = JSON.parse(mcpRaw) as { servers?: Record<string, Record<string, unknown>> }
+      const servers = mcpJson.servers
+      if (servers) {
+        let changed = false
+        for (const [key, server] of Object.entries(servers)) {
+          if (key !== 'gui_schedule' && server.required !== false && server.command === 'npx') {
+            server.required = false
+            changed = true
+          }
+        }
+        if (changed) {
+          writeFileSync(mcpJsonPath, JSON.stringify(mcpJson, null, 2), 'utf8')
+          console.info('[mcp-migration] set npx MCP servers as non-required for faster startup')
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[mcp-migration] failed to set MCP servers as non-required:', e)
+  }
+
   logDir = resolveLogDirectory()
   configureLogger({
     dir: logDir,

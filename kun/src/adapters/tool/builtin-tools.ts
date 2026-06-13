@@ -17,8 +17,8 @@ export * from './builtin-tool-operations.js'
 export * from './builtin-read-tool.js'
 export * from './builtin-file-tools.js'
 export * from './builtin-search-tools.js'
-export * from './builtin-image-tool.js'
-export * from './builtin-video-tool.js'
+export { BuiltinImageTool, createImageLocalTool, type GenerateImageOptions, type GenerateImageResult, type ImageToolOptions } from './builtin-image-tool.js'
+export { BuiltinVideoTool, createVideoLocalTool, type GenerateVideoOptions, type GenerateVideoResult, type VideoToolOptions } from './builtin-video-tool.js'
 export * from './builtin-bash-tool.js'
 
 export function createBuiltinLocalTool(

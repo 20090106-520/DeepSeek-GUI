@@ -1,12 +1,85 @@
-import { LocalToolHost, type LocalTool } from './local-tool-host.js'
-import type { ImageLocalToolOptions } from './builtin-tool-types.js'
+import type { LocalTool } from './local-tool-host.js'
 
-export function createImageLocalTool(options: ImageLocalToolOptions = {}): LocalTool {
-  const imageOps = options.operations
-  return LocalToolHost.defineTool({
-    name: 'generate_image',
-    description: 'Generate images from text prompts using AI image generation models',
-    inputSchema: {
+export type ImageGenerationStyle = 'photorealistic' | 'illustration' | 'anime' | '3d' | 'abstract' | 'cartoon'
+
+export interface GenerateImageOptions {
+  prompt: string
+  style?: ImageGenerationStyle
+  width?: number
+  height?: number
+  quality?: 'standard' | 'high' | 'ultra'
+}
+
+export interface GenerateImageResult {
+  success: boolean
+  imageUrl?: string
+  imageBase64?: string
+  error?: string
+}
+
+export interface ImageToolOperations {
+  generateImage?: (options: GenerateImageOptions) => Promise<GenerateImageResult>
+}
+
+export type ImageToolOptions = {
+  operations?: ImageToolOperations
+}
+
+export class BuiltinImageTool implements LocalTool {
+  readonly name = 'generate_image'
+  readonly description = 'Generate images from text prompts using AI image generation models'
+  readonly toolKind = 'tool_call' as const
+  readonly policy = 'auto' as const
+
+  get inputSchema(): Record<string, unknown> {
+    return this.schema
+  }
+
+  private readonly operations: ImageToolOperations
+
+  constructor(options: ImageToolOptions = {}) {
+    this.operations = options.operations ?? {}
+  }
+
+  async execute(args: Record<string, unknown>, _context: unknown): Promise<{ output: unknown; isError?: boolean }> {
+    const result = await this.call(args)
+    const isError = !result.success
+    return { output: result, isError }
+  }
+
+  async call(args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const prompt = typeof args.prompt === 'string' ? args.prompt : ''
+    const style = (typeof args.style === 'string' ? args.style : 'photorealistic') as ImageGenerationStyle
+    const width = typeof args.width === 'number' ? args.width : 1024
+    const height = typeof args.height === 'number' ? args.height : 1024
+    const quality = (typeof args.quality === 'string' ? args.quality : 'standard') as 'standard' | 'high' | 'ultra'
+
+    if (!prompt.trim()) {
+      return {
+        success: false,
+        error: 'Prompt is required'
+      }
+    }
+
+    if (this.operations.generateImage) {
+      const result = await this.operations.generateImage({
+        prompt,
+        style,
+        width,
+        height,
+        quality
+      })
+      return { ...result }
+    }
+
+    return {
+      success: false,
+      error: 'Image generation is not available'
+    }
+  }
+
+  get schema(): Record<string, unknown> {
+    return {
       type: 'object',
       properties: {
         prompt: {
@@ -40,28 +113,11 @@ export function createImageLocalTool(options: ImageLocalToolOptions = {}): Local
           default: 'standard'
         }
       },
-      required: ['prompt'],
-      additionalProperties: false
-    },
-    policy: 'on-request',
-    toolKind: 'tool_call',
-    execute: async (args) => {
-      const prompt = typeof args.prompt === 'string' ? args.prompt : ''
-      const style = typeof args.style === 'string' ? args.style as 'photorealistic' | 'illustration' | 'anime' | '3d' | 'abstract' | 'cartoon' : 'photorealistic'
-      const width = typeof args.width === 'number' ? args.width : 1024
-      const height = typeof args.height === 'number' ? args.height : 1024
-      const quality = typeof args.quality === 'string' ? args.quality as 'standard' | 'high' | 'ultra' : 'standard'
-
-      if (!prompt.trim()) {
-        return { output: { success: false, error: 'Prompt is required' }, isError: true }
-      }
-
-      if (imageOps?.generateImage) {
-        const result = await imageOps.generateImage({ prompt, style, width, height, quality })
-        return { output: { ...result } }
-      }
-
-      return { output: { success: false, error: 'Image generation is not available' }, isError: true }
+      required: ['prompt']
     }
-  })
+  }
+}
+
+export function createImageLocalTool(options: ImageToolOptions = {}): LocalTool {
+  return new BuiltinImageTool(options)
 }
