@@ -131,7 +131,8 @@ function resolveGithubReleaseUrl(): string | null {
         ? String((repository as { url?: unknown }).url ?? '')
         : ''
   const repo = normalizeGithubOwnerRepo(raw)
-  return repo ? `https://github.com/${repo}/releases` : null
+  if (repo) return `https://github.com/${repo}/releases`
+  return 'https://github.com/20090106-520/DeepSeek-GUI/releases'
 }
 
 function downloadPageUrl(): string {
@@ -345,8 +346,8 @@ function configureUpdaterChannel(channel: GuiUpdateChannel): void {
   configuredChannel = normalized
   configuredFeedUrl = feedUrl
   autoUpdater.allowPrerelease = normalized === 'frontier'
-  const githubRepo = resolveGithubOwnerRepoFromPkg()
-  if (githubRepo && !envUpdateUrl(normalized)) {
+  const githubRepo = resolveGithubOwnerRepoFromPkg() || '20090106-520/DeepSeek-GUI'
+  if (!envUpdateUrl(normalized)) {
     const [owner, repo] = githubRepo.split('/')
     autoUpdater.setFeedURL({
       provider: 'github',
@@ -374,9 +375,9 @@ async function checkGithubReleaseUpdate(
   code: GuiUpdateFailureCode = 'unsupported'
 ): Promise<GuiUpdateInfo> {
   const currentVersion = app.getVersion()
-  const githubRepo = resolveGithubOwnerRepoFromPkg()
+  let githubRepo = resolveGithubOwnerRepoFromPkg()
   if (!githubRepo) {
-    return { ok: false, currentVersion, code, message: 'No GitHub repo configured.', releaseUrl: downloadPageUrl(), channel }
+    githubRepo = '20090106-520/DeepSeek-GUI'
   }
   const [owner, repo] = githubRepo.split('/')
   try {
@@ -563,7 +564,9 @@ export async function checkGuiUpdate(channel?: GuiUpdateChannel): Promise<GuiUpd
   } catch (e) {
     const githubResult = await checkGithubReleaseUpdate(selectedChannel, 'auto_updater_failed')
     if (githubResult.ok) return githubResult
-    const message = sanitizeUpdaterError(e instanceof Error ? e.message : String(e), selectedChannel)
+    const rawMessage = sanitizeUpdaterError(e instanceof Error ? e.message : String(e), selectedChannel)
+    const fallbackHint = githubResult.message ? ` (GitHub fallback: ${githubResult.message})` : ''
+    const message = `${rawMessage}${fallbackHint}`
     const info: GuiUpdateInfo = {
       ok: false,
       currentVersion: app.getVersion(),
