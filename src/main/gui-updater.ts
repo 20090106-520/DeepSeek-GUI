@@ -347,10 +347,12 @@ function configureUpdaterChannel(channel: GuiUpdateChannel): void {
   autoUpdater.allowPrerelease = normalized === 'frontier'
   const githubRepo = resolveGithubOwnerRepoFromPkg()
   if (githubRepo && !envUpdateUrl(normalized)) {
+    const [owner, repo] = githubRepo.split('/')
     autoUpdater.setFeedURL({
       provider: 'github',
-      owner: githubRepo.split('/')[0],
-      repo: githubRepo.split('/')[1],
+      owner,
+      repo,
+      vPrefixedTagName: true,
       ...(normalized === 'frontier' ? { releaseType: 'prerelease' } : {})
     })
   } else {
@@ -365,6 +367,47 @@ function configureUpdaterChannel(channel: GuiUpdateChannel): void {
 
 export function setGuiUpdateChannel(channel: GuiUpdateChannel): void {
   configureUpdaterChannel(channel)
+}
+
+async function checkGithubReleaseUpdate(
+  channel: GuiUpdateChannel,
+  code: GuiUpdateFailureCode = 'unsupported'
+): Promise<GuiUpdateInfo> {
+  const currentVersion = app.getVersion()
+  const githubRepo = resolveGithubOwnerRepoFromPkg()
+  if (!githubRepo) {
+    return { ok: false, currentVersion, code, message: 'No GitHub repo configured.', releaseUrl: downloadPageUrl(), channel }
+  }
+  const [owner, repo] = githubRepo.split('/')
+  try {
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/latest`, {
+      headers: { 'User-Agent': `deepseek-gui/${currentVersion}`, 'Accept': 'application/vnd.github+json' }
+    })
+    if (!res.ok) {
+      return { ok: false, currentVersion, code, message: `GitHub API returned ${res.status}.`, releaseUrl: downloadPageUrl(), channel }
+    }
+    const data = await res.json() as { tag_name?: string; published_at?: string; html_url?: string }
+    const latestVersion = (data.tag_name ?? '').replace(/^v/i, '')
+    if (!latestVersion) {
+      return { ok: false, currentVersion, code, message: 'No version in GitHub release.', releaseUrl: downloadPageUrl(), channel }
+    }
+    const info: Extract<GuiUpdateInfo, { ok: true }> = {
+      ok: true,
+      currentVersion,
+      latestVersion,
+      hasUpdate: isVersionGreater(latestVersion, currentVersion),
+      releaseUrl: data.html_url ?? releaseUrlForVersion(latestVersion),
+      releaseDate: data.published_at ?? '',
+      channel,
+      manualOnly: true,
+      downloaded: false
+    }
+    lastInfo = info
+    emitGuiUpdateState(info.hasUpdate ? { status: 'available', info } : { status: 'not_available', info })
+    return info
+  } catch (e) {
+    return { ok: false, currentVersion, code, message: e instanceof Error ? e.message : String(e), releaseUrl: downloadPageUrl(), channel }
+  }
 }
 
 async function checkManualUpdate(
@@ -518,6 +561,8 @@ export async function checkGuiUpdate(channel?: GuiUpdateChannel): Promise<GuiUpd
     emitGuiUpdateState(info.hasUpdate ? { status: 'available', info } : { status: 'not_available', info })
     return info
   } catch (e) {
+    const githubResult = await checkGithubReleaseUpdate(selectedChannel, 'auto_updater_failed')
+    if (githubResult.ok) return githubResult
     const message = sanitizeUpdaterError(e instanceof Error ? e.message : String(e), selectedChannel)
     const info: GuiUpdateInfo = {
       ok: false,
