@@ -184,6 +184,7 @@ function CodeBlock({
   const [expanded, setExpanded] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
   const copyResetRef = useRef<number | null>(null)
+  const prevLineCountRef = useRef(0)
 
   useEffect(() => {
     let cancelled = false
@@ -217,6 +218,22 @@ function CodeBlock({
   useEffect(() => {
     setExpanded(false)
   }, [trimmedCode, language])
+
+  useEffect(() => {
+    if (!isAnimating) return
+    const lineCount = trimmedCode.split('\n').length
+    if (lineCount <= prevLineCountRef.current) {
+      prevLineCountRef.current = lineCount
+      return
+    }
+    prevLineCountRef.current = lineCount
+    const el = bodyRef.current
+    if (!el) return
+    const parent = el.closest('.ds-code-block-body')
+    if (parent) {
+      parent.scrollTop = parent.scrollHeight
+    }
+  }, [trimmedCode, isAnimating])
 
   useEffect(
     () => () => {

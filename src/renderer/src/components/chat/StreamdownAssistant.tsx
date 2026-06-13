@@ -10,16 +10,18 @@ import { previewWorkspaceFile } from '../../lib/workspace-file-preview'
 import { useChatStore } from '../../store/chat-store'
 import { StreamdownCode } from './StreamdownCode'
 
-/**
- * Tuned for faster, cleaner single-line streaming:
- * - keep per-character reveal for short CJK/plain text
- * - use a quick fade instead of blur
- * - reduce stagger so chunks don't "crawl" across the screen
- */
 const STREAMING_ANIMATED: AnimateOptions = {
   sep: 'char',
-  duration: 120,
-  stagger: 8,
+  duration: 80,
+  stagger: 4,
+  easing: 'ease-out',
+  animation: 'fadeIn'
+}
+
+const STREAMING_ANIMATED_WORD: AnimateOptions = {
+  sep: 'word',
+  duration: 60,
+  stagger: 6,
   easing: 'ease-out',
   animation: 'fadeIn'
 }
@@ -117,16 +119,24 @@ const INLINE_STRUCTURED_MARKDOWN_REGEX =
   /`[^`\n]+`|!\[[^\]]*]\([^)\n]+\)|\[[^\]]+]\([^)\n]+\)/
 const MULTILINE_TEXT_REGEX = /\r?\n/
 const MAX_ANIMATED_STREAMING_CHARS = 600
+const MAX_WORD_ANIMATED_STREAMING_CHARS = 4000
 
-export function shouldAnimateStreamingText(text: string): boolean {
+export function shouldAnimateStreamingText(text: string): AnimateOptions | false {
   const trimmed = text.trim()
   if (!trimmed) return false
-  if (trimmed.length > MAX_ANIMATED_STREAMING_CHARS) return false
-  if (MULTILINE_TEXT_REGEX.test(trimmed)) return false
-  return !(
-    BLOCK_MARKDOWN_REGEX.test(trimmed) ||
-    INLINE_STRUCTURED_MARKDOWN_REGEX.test(trimmed)
-  )
+  const hasBlockMarkdown = BLOCK_MARKDOWN_REGEX.test(trimmed)
+  const hasInlineStructured = INLINE_STRUCTURED_MARKDOWN_REGEX.test(trimmed)
+  const isMultiline = MULTILINE_TEXT_REGEX.test(trimmed)
+
+  if (!isMultiline && !hasBlockMarkdown && !hasInlineStructured && trimmed.length <= MAX_ANIMATED_STREAMING_CHARS) {
+    return STREAMING_ANIMATED
+  }
+
+  if (trimmed.length <= MAX_WORD_ANIMATED_STREAMING_CHARS) {
+    return STREAMING_ANIMATED_WORD
+  }
+
+  return false
 }
 
 type Props = {
@@ -141,7 +151,7 @@ type Props = {
 }
 
 export function StreamdownAssistant({ text, streaming, className }: Props): ReactElement {
-  const animated = streaming && shouldAnimateStreamingText(text) ? STREAMING_ANIMATED : false
+  const animated = streaming ? shouldAnimateStreamingText(text) : false
   const isAnimating = animated !== false
 
   return (

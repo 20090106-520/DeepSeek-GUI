@@ -2,18 +2,34 @@ import { describe, expect, it } from 'vitest'
 import { shouldAnimateStreamingText } from './StreamdownAssistant'
 
 describe('shouldAnimateStreamingText', () => {
-  it('keeps the lightweight reveal for short single-line text', () => {
-    expect(shouldAnimateStreamingText('正在检查配置。')).toBe(true)
-    expect(shouldAnimateStreamingText('Checking the CSS variables.')).toBe(true)
+  it('returns char-level animation for short single-line text', () => {
+    const result = shouldAnimateStreamingText('正在检查配置。')
+    expect(result).not.toBe(false)
+    expect(result.sep).toBe('char')
   })
 
-  it('lets multiline streaming render from the actual SSE sequence', () => {
-    expect(shouldAnimateStreamingText('First line\nSecond line')).toBe(false)
-    expect(shouldAnimateStreamingText('First paragraph\n\nSecond paragraph')).toBe(false)
+  it('returns word-level animation for multiline text within limit', () => {
+    const result = shouldAnimateStreamingText('First line\nSecond line')
+    expect(result).not.toBe(false)
+    expect(result.sep).toBe('word')
   })
 
-  it('does not animate structured markdown while it is still streaming', () => {
-    expect(shouldAnimateStreamingText('- one\n- two')).toBe(false)
-    expect(shouldAnimateStreamingText('Use `npm test` next.')).toBe(false)
+  it('returns word-level animation for structured markdown within limit', () => {
+    const result = shouldAnimateStreamingText('- one\n- two')
+    expect(result).not.toBe(false)
+    expect(result.sep).toBe('word')
+    const result2 = shouldAnimateStreamingText('Use `npm test` next.')
+    expect(result2).not.toBe(false)
+    expect(result2.sep).toBe('word')
+  })
+
+  it('returns false for very long text exceeding word animation limit', () => {
+    const longText = 'a'.repeat(5000)
+    expect(shouldAnimateStreamingText(longText)).toBe(false)
+  })
+
+  it('returns false for empty text', () => {
+    expect(shouldAnimateStreamingText('')).toBe(false)
+    expect(shouldAnimateStreamingText('   ')).toBe(false)
   })
 })
