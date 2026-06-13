@@ -315,9 +315,9 @@ export type DsGuiApi = {
 export type AgnesImageGenerationPayload = {
   prompt: string
   model?: string
-  style?: string
-  width?: number
-  height?: number
+  size?: string
+  image?: string[]
+  returnBase64?: boolean
 }
 
 export type AgnesImageGenerationResult =

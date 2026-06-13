@@ -78,6 +78,7 @@
   "agnesRequestSubmitted": "Generation request submitted.",
   "agnesApiNote": "Note: Full API integration requires Agnes AI API configuration.",
   "agnesVideoLink": "View Video",
+  "agnesSize": "Output Size",
   "agnesScenarios": "Use Cases",
   "agnesScenarioTextToImage": "Text to Image",
   "agnesScenarioProduct": "Product Image",

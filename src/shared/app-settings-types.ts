@@ -460,9 +460,9 @@ export type AgnesGenerationProviderV1 = {
 
 export const DEFAULT_AGNES_GENERATION_PROVIDER: AgnesGenerationProviderV1 = {
   enabled: false,
-  baseUrl: 'https://api.siliconflow.cn/v1',
+  baseUrl: 'https://apihub.agnes-ai.com',
   apiKey: '',
-  imageModel: 'stabilityai/stable-diffusion-3-5-large',
+  imageModel: 'agnes-image-2.1-flash',
   videoModel: 'tencent/HunyuanVideo'
 }
 

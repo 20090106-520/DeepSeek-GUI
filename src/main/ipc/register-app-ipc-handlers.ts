@@ -831,9 +831,9 @@ export function registerAppIpcHandlers(options: RegisterAppIpcHandlersOptions): 
     const request = parseIpcPayload('agnes:generate-image', z.object({
       prompt: z.string().min(1).max(MAX_BODY_BYTES),
       model: z.string().max(256).optional(),
-      style: z.string().max(64).optional(),
-      width: z.number().int().min(256).max(4096).optional(),
-      height: z.number().int().min(256).max(4096).optional()
+      size: z.string().max(32).optional(),
+      image: z.array(z.string()).optional(),
+      returnBase64: z.boolean().optional()
     }).strict(), payload)
     const settings = await store.load()
     const agnes = settings.agnesGeneration
@@ -843,19 +843,33 @@ export function registerAppIpcHandlers(options: RegisterAppIpcHandlersOptions): 
     try {
       const baseUrl = agnes.baseUrl.replace(/\/+$/, '')
       const model = request.model || agnes.imageModel
-      const res = await fetch(`${baseUrl}/images/generations`, {
+      const size = request.size || '1024x1024'
+      const isImg2Img = request.image && request.image.length > 0
+      const extraBody: Record<string, unknown> = {}
+      if (isImg2Img) {
+        extraBody.image = request.image
+      }
+      if (isImg2Img || request.returnBase64) {
+        extraBody.response_format = request.returnBase64 ? 'b64_json' : 'url'
+      } else {
+        extraBody.response_format = 'url'
+      }
+      const body: Record<string, unknown> = {
+        model,
+        prompt: request.prompt,
+        size,
+        extra_body: extraBody
+      }
+      if (!isImg2Img && request.returnBase64) {
+        body.return_base64 = true
+      }
+      const res = await fetch(`${baseUrl}/v1/images/generations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${agnes.apiKey.trim()}`
         },
-        body: JSON.stringify({
-          model,
-          prompt: request.prompt,
-          n: 1,
-          size: request.width && request.height ? `${request.width}x${request.height}` : undefined,
-          style: request.style
-        })
+        body: JSON.stringify(body)
       })
       if (!res.ok) {
         const text = await res.text()

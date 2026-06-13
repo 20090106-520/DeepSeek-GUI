@@ -209,7 +209,7 @@ const defaultSettings = (): AppSettingsV1 => ({
   schedule: defaultScheduleSettings(),
   accentColor: 'blue',
   modelProvider: { id: 'deepseek', name: 'DeepSeek' },
-  agnesGeneration: { enabled: false, baseUrl: '', apiKey: '', imageModel: '', videoModel: '' },
+  agnesGeneration: { enabled: false, baseUrl: 'https://apihub.agnes-ai.com', apiKey: '', imageModel: 'agnes-image-2.1-flash', videoModel: '' },
   preferences: { autoSaveHistory: true, rememberLastWorkspace: true, autoFocusInput: true, showWelcomeTips: true, compactMode: false, conversationSortOrder: 'latest', defaultCompletionMode: 'agent' }
 })
 

@@ -594,15 +594,15 @@
   "usageThisWeek": "This Week",
   "usageToday": "Today",
   "agnesGenerationTitle": "Agnes AI Image/Video Generation",
-  "agnesGenerationDesc": "Configure the image and video generation API endpoint used by the Agnes AI panel. Supports OpenAI-compatible third-party services (e.g. SiliconFlow, ZhipuAI).",
+  "agnesGenerationDesc": "Configure the image and video generation API endpoint used by the Agnes AI panel. Defaults to Agnes Image 2.1 Flash (Sapiens AI), also supports OpenAI-compatible third-party services.",
   "agnesGenerationEnabled": "Enable Image/Video Generation",
   "agnesGenerationEnabledDesc": "When enabled, the Agnes AI panel's image and video generation will call the configured API endpoint.",
   "agnesGenerationBaseUrl": "API Base URL",
-  "agnesGenerationBaseUrlDesc": "The base URL for the image/video generation API, must be OpenAI-compatible.",
+  "agnesGenerationBaseUrlDesc": "The base URL for the image/video generation API. Defaults to Sapiens AI endpoint (https://apihub.agnes-ai.com).",
   "agnesGenerationApiKey": "API Key",
   "agnesGenerationApiKeyDesc": "The API key for accessing the image/video generation service.",
   "agnesGenerationImageModel": "Image Generation Model",
-  "agnesGenerationImageModelDesc": "The model ID used for image generation, depends on your API service.",
+  "agnesGenerationImageModelDesc": "The model ID used for image generation. Defaults to agnes-image-2.1-flash, supporting text-to-image and image-to-image.",
   "agnesGenerationVideoModel": "Video Generation Model",
   "agnesGenerationVideoModelDesc": "The model ID used for video generation, depends on your API service."
 }

@@ -52,6 +52,7 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
   const [generationType, setGenerationType] = useState<GenerationType>('image')
   const [prompt, setPrompt] = useState('')
   const [selectedModel, setSelectedModel] = useState('')
+  const [selectedSize, setSelectedSize] = useState('1024x1024')
   const [generating, setGenerating] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [uploadedImageName, setUploadedImageName] = useState('')
@@ -100,12 +101,13 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
       const dsGui = window.dsGui
 
       if (generationType === 'image' || generationType === 'edit') {
+        const isImg2Img = generationType === 'edit' && !!uploadedImage
         const result = await dsGui.agnesGenerateImage({
           prompt,
           model,
-          style: generationType === 'edit' ? 'edit' : undefined,
-          width: 1024,
-          height: 1024
+          size: selectedSize,
+          ...(isImg2Img ? { image: [uploadedImage!] } : {}),
+          returnBase64: true
         })
 
         if (result.ok) {
@@ -232,12 +234,37 @@ export function AgnesGenerationPanel({ onClose }: AgnesGenerationPanelProps): Re
               className="w-full rounded-xl border border-ds-border bg-ds-card px-4 py-2.5 text-sm text-ds-ink placeholder-ds-faint outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
-              placeholder={generationType === 'video' ? 'tencent/HunyuanVideo' : 'stabilityai/stable-diffusion-3-5-large'}
+              placeholder="agnes-image-2.1-flash"
             />
             <p className="mt-1 text-xs text-ds-muted">
               {t('agnesModelHint')}
             </p>
           </div>
+
+          {/* Size Selector */}
+          {(generationType === 'image' || generationType === 'edit') && (
+            <div>
+              <label className="mb-2 block text-sm font-medium text-ds-ink">
+                {t('agnesSize')}
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {['1024x1024', '1024x768', '768x1024', '1280x720', '720x1280', '1536x1024', '1024x1536'].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setSelectedSize(s)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                      selectedSize === s
+                        ? 'bg-purple-500 text-white shadow-sm'
+                        : 'bg-ds-subtle text-ds-muted hover:bg-ds-hover'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Image Upload for Edit / Understand */}
           {needsImage && (
