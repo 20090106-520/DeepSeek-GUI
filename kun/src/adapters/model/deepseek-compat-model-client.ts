@@ -274,12 +274,16 @@ export class DeepseekCompatModelClient implements ModelClient {
     signal: AbortSignal
   ): Promise<{ kind: 'response'; response: Response } | { kind: 'error'; message: string }> {
     try {
+      const connectTimeoutController = new AbortController()
+      const connectTimeout = setTimeout(() => connectTimeoutController.abort(), 10_000)
+      const combinedSignal = combineAbortSignals(signal, connectTimeoutController.signal)
       const response = await this.fetchImpl(url, {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
-        signal
+        signal: combinedSignal
       })
+      clearTimeout(connectTimeout)
       return { kind: 'response', response }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
@@ -2162,4 +2166,14 @@ function limitHistoryPreservingCompaction(history: TurnItem[], windowSize: numbe
     return windowSize <= 1 ? [item] : [item, ...history.slice(-(windowSize - 1))]
   }
   return limited
+}
+
+function combineAbortSignals(primary: AbortSignal, secondary: AbortSignal): AbortSignal {
+  if (primary.aborted) return primary
+  if (secondary.aborted) return secondary
+  const controller = new AbortController()
+  const onAbort = (): void => controller.abort()
+  primary.addEventListener('abort', onAbort, { once: true })
+  secondary.addEventListener('abort', onAbort, { once: true })
+  return controller.signal
 }

@@ -78,6 +78,11 @@ const COMPLETION_NOTIFICATION_DEDUPE_LIMIT = 200
 export const MAX_WATCHED_COMPLETION_NOTIFICATIONS = 200
 export const MAX_PENDING_CLAW_FEISHU_MIRRORS = 50
 const completionNotificationKeys: string[] = []
+
+const DELTA_THROTTLE_MS = 50
+let deltaThrottleTimer: ReturnType<typeof setTimeout> | null = null
+let pendingDeltas: Array<{ kind: string; text: string; seq?: number }> = []
+let pendingDeltaSet: ((s: ChatState) => Partial<ChatState>) | null = null
 const completionNotificationKeySet = new Set<string>()
 const watchCompletionNotificationKeys = new Map<string, string>()
 
@@ -596,64 +601,20 @@ export function buildThreadEventSink(
           error: clearRuntimeStreamRecoveringError(s.error)
         }
       }),
-    onDeltas: (deltas) =>
-      set((s) => {
-        if (!isCurrentStream()) return {}
-        if (deltas.length === 0) return {}
-        resetBusyRecoveryAttempts()
-        const nextError = clearRuntimeStreamRecoveringError(s.error)
-        const seqs = deltas
-          .map((delta) => delta.seq)
-          .filter((value): value is number => typeof value === 'number')
-        const nextLastSeq = seqs.length > 0 ? Math.max(s.lastSeq, ...seqs) : s.lastSeq
-        const base: Partial<ChatState> = {
-          error: nextError,
-          ...(nextLastSeq !== s.lastSeq ? { lastSeq: nextLastSeq } : {})
-        }
-        // When deltas arrive but busy is false (e.g. switching back to a running
-        // thread or SSE stream recovered from a transient error), restore the
-        // busy flag so the interrupt button reappears.
-        if (!s.busy) {
-          base.busy = true
-          armBusyWatchdog(set, get)
-        }
-        let liveReasoning = s.liveReasoning
-        let liveAssistant = s.liveAssistant
-        let nextReasoningFirstAtByUserId = s.turnReasoningFirstAtByUserId
-        let nextReasoningLastAtByUserId = s.turnReasoningLastAtByUserId
-        const userId = s.currentTurnUserId
-        for (const delta of deltas) {
-          if (delta.kind === 'agent_reasoning') {
-            liveReasoning += delta.text
-            if (userId) {
-              const now = Date.now()
-              if (typeof nextReasoningFirstAtByUserId[userId] !== 'number') {
-                nextReasoningFirstAtByUserId =
-                  nextReasoningFirstAtByUserId === s.turnReasoningFirstAtByUserId
-                    ? { ...s.turnReasoningFirstAtByUserId, [userId]: now }
-                    : { ...nextReasoningFirstAtByUserId, [userId]: now }
-              }
-              nextReasoningLastAtByUserId =
-                nextReasoningLastAtByUserId === s.turnReasoningLastAtByUserId
-                  ? { ...s.turnReasoningLastAtByUserId, [userId]: now }
-                  : { ...nextReasoningLastAtByUserId, [userId]: now }
-            }
-            continue
-          }
-          liveAssistant += delta.text
-        }
-        return {
-          ...base,
-          ...(liveReasoning !== s.liveReasoning ? { liveReasoning } : {}),
-          ...(liveAssistant !== s.liveAssistant ? { liveAssistant } : {}),
-          ...(nextReasoningFirstAtByUserId !== s.turnReasoningFirstAtByUserId
-            ? { turnReasoningFirstAtByUserId: nextReasoningFirstAtByUserId }
-            : {}),
-          ...(nextReasoningLastAtByUserId !== s.turnReasoningLastAtByUserId
-            ? { turnReasoningLastAtByUserId: nextReasoningLastAtByUserId }
-            : {})
-        }
-      }),
+    onDeltas: (deltas) => {
+      if (!isCurrentStream()) return
+      if (deltas.length === 0) return
+      resetBusyRecoveryAttempts()
+      for (const delta of deltas) {
+        pendingDeltas.push({ kind: delta.kind, text: delta.text, seq: delta.seq })
+      }
+      if (!deltaThrottleTimer) {
+        deltaThrottleTimer = setTimeout(() => {
+          deltaThrottleTimer = null
+          flushPendingDeltas(set, get, isCurrentStream)
+        }, DELTA_THROTTLE_MS)
+      }
+    },
     onTool: (ev) => {
       if (!isCurrentStream()) return
       notifyWriteWorkspaceFileRefresh(get, ev)
@@ -1091,4 +1052,68 @@ export function buildThreadEventSink(
       set((s) => ({ usageRefreshKey: s.usageRefreshKey + 1 }))
     }
   }
+}
+
+function flushPendingDeltas(
+  set: (partial: Partial<ChatState> | ((state: ChatState) => Partial<ChatState>)) => void,
+  get: () => ChatState,
+  isCurrentStream: () => boolean
+): void {
+  const deltas = pendingDeltas
+  pendingDeltas = []
+  if (deltas.length === 0 || !isCurrentStream()) return
+
+  set((s) => {
+    const nextError = clearRuntimeStreamRecoveringError(s.error)
+    const seqs = deltas
+      .map((d) => d.seq)
+      .filter((v): v is number => typeof v === 'number')
+    const nextLastSeq = seqs.length > 0 ? Math.max(s.lastSeq, ...seqs) : s.lastSeq
+    const base: Partial<ChatState> = {
+      error: nextError,
+      ...(nextLastSeq !== s.lastSeq ? { lastSeq: nextLastSeq } : {})
+    }
+    if (!s.busy) {
+      base.busy = true
+      armBusyWatchdog(set, get)
+    }
+    const reasoningParts: string[] = []
+    const assistantParts: string[] = []
+    let nextReasoningFirstAtByUserId = s.turnReasoningFirstAtByUserId
+    let nextReasoningLastAtByUserId = s.turnReasoningLastAtByUserId
+    const userId = s.currentTurnUserId
+    for (const delta of deltas) {
+      if (delta.kind === 'agent_reasoning') {
+        reasoningParts.push(delta.text)
+        if (userId) {
+          const now = Date.now()
+          if (typeof nextReasoningFirstAtByUserId[userId] !== 'number') {
+            nextReasoningFirstAtByUserId =
+              nextReasoningFirstAtByUserId === s.turnReasoningFirstAtByUserId
+                ? { ...s.turnReasoningFirstAtByUserId, [userId]: now }
+                : { ...nextReasoningFirstAtByUserId, [userId]: now }
+          }
+          nextReasoningLastAtByUserId =
+            nextReasoningLastAtByUserId === s.turnReasoningLastAtByUserId
+              ? { ...s.turnReasoningLastAtByUserId, [userId]: now }
+              : { ...nextReasoningLastAtByUserId, [userId]: now }
+        }
+      } else {
+        assistantParts.push(delta.text)
+      }
+    }
+    const liveReasoning = reasoningParts.length > 0 ? s.liveReasoning + reasoningParts.join('') : s.liveReasoning
+    const liveAssistant = assistantParts.length > 0 ? s.liveAssistant + assistantParts.join('') : s.liveAssistant
+    return {
+      ...base,
+      ...(liveReasoning !== s.liveReasoning ? { liveReasoning } : {}),
+      ...(liveAssistant !== s.liveAssistant ? { liveAssistant } : {}),
+      ...(nextReasoningFirstAtByUserId !== s.turnReasoningFirstAtByUserId
+        ? { turnReasoningFirstAtByUserId: nextReasoningFirstAtByUserId }
+        : {}),
+      ...(nextReasoningLastAtByUserId !== s.turnReasoningLastAtByUserId
+        ? { turnReasoningLastAtByUserId: nextReasoningLastAtByUserId }
+        : {})
+    }
+  })
 }

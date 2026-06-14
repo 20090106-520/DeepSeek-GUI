@@ -1,18 +1,11 @@
 import { encodeSseEvent } from '../sse.js'
+import { SseEventBatcher } from '../sse-batcher.js'
 import type { EventBus } from '../../ports/event-bus.js'
 import type { SessionStore } from '../../ports/session-store.js'
 import type { RuntimeEvent } from '../../contracts/events.js'
 
 const HEARTBEAT_INTERVAL_MS = 15_000
 
-/**
- * Build an SSE response for `GET /v1/threads/{id}/events`.
- *
- * The handler first replays persisted events with `seq` greater than
- * `since_seq`, then subscribes to the event bus to deliver live
- * updates. The stream closes when the request's `AbortSignal`
- * fires (the client disconnects) or the server stops publishing.
- */
 export function buildEventStreamResponse(input: {
   request: Request
   threadId: string
@@ -28,11 +21,26 @@ export function buildEventStreamResponse(input: {
   let unsubscribe: (() => void) | undefined
   let heartbeatTimer: ReturnType<typeof setInterval> | undefined
   let closed = false
+  let streamController: ReadableStreamDefaultController<Uint8Array> | null = null
+  let closeFn: (() => void) | undefined
+  const batcher = new SseEventBatcher(
+    (encoded) => {
+      if (closed || !streamController) return
+      try {
+        streamController.enqueue(encoder.encode(encoded))
+      } catch {
+        closeFn?.()
+      }
+    },
+    { maxBatchSize: 20, flushIntervalMs: 50, maxBufferBytes: 256 * 1024 }
+  )
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      streamController = controller
       const close = () => {
         if (closed) return
         closed = true
+        batcher.close()
         unsubscribe?.()
         if (heartbeatTimer) {
           clearInterval(heartbeatTimer)
@@ -44,19 +52,17 @@ export function buildEventStreamResponse(input: {
           // Already closed; ignore.
         }
       }
+      closeFn = close
       input.request.signal.addEventListener('abort', close)
       try {
         const backlog = await input.sessionStore.loadEventsSince(input.threadId, sinceSeq)
         for (const event of backlog) {
-          controller.enqueue(encoder.encode(encodeSseEvent(event)))
+          batcher.push(event)
         }
+        batcher.flush()
         unsubscribe = input.eventBus.subscribe(input.threadId, (event: RuntimeEvent) => {
           if (closed) return
-          try {
-            controller.enqueue(encoder.encode(encodeSseEvent(event)))
-          } catch {
-            close()
-          }
+          batcher.push(event)
         })
         heartbeatTimer = setInterval(() => {
           if (closed) return
@@ -88,6 +94,7 @@ export function buildEventStreamResponse(input: {
     },
     cancel() {
       closed = true
+      batcher.close()
       unsubscribe?.()
       if (heartbeatTimer) clearInterval(heartbeatTimer)
     }

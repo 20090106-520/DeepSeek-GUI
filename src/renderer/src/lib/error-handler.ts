@@ -43,6 +43,7 @@ export interface RetryConfig {
   maxRetries: number
   delayMs: number
   backoffFactor: number
+  retryIf?: (error: unknown) => boolean
 }
 
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
@@ -51,7 +52,47 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
   backoffFactor: 2
 }
 
+const CODE_TO_CATEGORY: Record<string, ErrorCategory> = {
+  rate_limited: 'rate_limit',
+  circuit_open: 'circuit_open',
+  stream_idle_timeout: 'stream',
+  stream_read_error: 'stream',
+  deepseek_http_401: 'authentication',
+  deepseek_http_403: 'authentication',
+  deepseek_http_404: 'resource',
+  deepseek_http_400: 'validation',
+  deepseek_http_429: 'rate_limit',
+  deepseek_http_500: 'api',
+  deepseek_http_502: 'api',
+  deepseek_http_503: 'api',
+  deepseek_http_504: 'api',
+  deepseek_unreachable: 'network',
+  http_401: 'authentication',
+  http_403: 'authentication',
+  http_404: 'resource',
+  http_400: 'validation',
+  http_429: 'rate_limit',
+  http_500: 'api',
+  http_502: 'api',
+  http_503: 'api',
+  http_504: 'api'
+}
+
 function categorizeError(error: unknown): ErrorCategory {
+  if (error && typeof error === 'object') {
+    const code = (error as { code?: string }).code
+    if (code && CODE_TO_CATEGORY[code]) {
+      return CODE_TO_CATEGORY[code]
+    }
+    const status = (error as { status?: number }).status
+    if (typeof status === 'number') {
+      if (status === 401 || status === 403) return 'authentication'
+      if (status === 404) return 'resource'
+      if (status === 400) return 'validation'
+      if (status === 429) return 'rate_limit'
+      if (status >= 500) return 'api'
+    }
+  }
   if (error instanceof Error) {
     const message = error.message.toLowerCase()
     if (message.includes('network') || message.includes('econnrefused') || message.includes('econnreset') || message.includes('enotfound')) {
@@ -106,7 +147,7 @@ export async function withRetry<T>(
   fn: () => Promise<T>,
   config: Partial<RetryConfig> = {}
 ): Promise<T> {
-  const { maxRetries, delayMs, backoffFactor } = { ...DEFAULT_RETRY_CONFIG, ...config }
+  const { maxRetries, delayMs, backoffFactor, retryIf } = { ...DEFAULT_RETRY_CONFIG, ...config }
   let lastError: Error | undefined
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -116,6 +157,14 @@ export async function withRetry<T>(
       lastError = error instanceof Error ? error : new Error(String(error))
       
       if (attempt >= maxRetries) {
+        throw lastError
+      }
+
+      if (retryIf && !retryIf(error)) {
+        throw lastError
+      }
+
+      if (!retryIf && !isRetryableError(error)) {
         throw lastError
       }
       

@@ -288,6 +288,7 @@ export class AgentLoop {
   private readonly promptTokenPressure = new Map<string, { model: string; promptTokens: number }>()
   private readonly toolStormBreakers = new Map<string, ToolStormBreaker>()
   private readonly toolCatalogSnapshots = new Map<string, ToolCatalogSnapshot>()
+  private static readonly MAX_CATALOG_SNAPSHOTS = 32
 
   constructor(opts: AgentLoopOptions) {
     this.opts = opts
@@ -1616,6 +1617,10 @@ export class AgentLoop {
     }
     const previous = this.toolCatalogSnapshots.get(key)
     this.toolCatalogSnapshots.set(key, current)
+    if (this.toolCatalogSnapshots.size > AgentLoop.MAX_CATALOG_SNAPSHOTS) {
+      const oldest = this.toolCatalogSnapshots.keys().next().value
+      if (oldest !== undefined) this.toolCatalogSnapshots.delete(oldest)
+    }
     if (!previous || previous.fingerprint === input.fingerprint) return { kind: 'none' }
     return isAdditiveToolCatalogChange(previous, current)
       ? { kind: 'additive', previous }
