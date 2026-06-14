@@ -107,7 +107,14 @@ const MODEL_META: Record<string, Partial<ModelMeta>> = {
   'ernie-speed-128k': { category: ['chat'], tags: ['fast', 'long-context'], speedLabel: 'fast', paramSize: '-', description: 'ERNIE Speed 128K', free: true },
   'ernie-lite-8k': { category: ['chat'], tags: ['lightweight'], speedLabel: 'fast', paramSize: '-', description: 'ERNIE Lite 8K', free: true },
   'ernie-lite-pro-128k': { category: ['chat'], tags: ['long-context'], speedLabel: 'fast', paramSize: '-', description: 'ERNIE Lite Pro 128K', free: true },
-  'ernie-char-8k': { category: ['chat'], tags: ['lightweight', 'character'], speedLabel: 'fast', paramSize: '-', description: 'ERNIE Character 8K', free: true }
+  'ernie-char-8k': { category: ['chat'], tags: ['lightweight', 'character'], speedLabel: 'fast', paramSize: '-', description: 'ERNIE Character 8K', free: true },
+  'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B': { category: ['chat', 'reasoning'], tags: ['reasoning', 'open-source'], speedLabel: 'medium', paramSize: '32B', description: 'DeepSeek R1 Distill Qwen 32B - 免费推理模型', free: true },
+  'deepseek-ai/DeepSeek-R1-Distill-Llama-70B': { category: ['chat', 'reasoning'], tags: ['reasoning', 'open-source'], speedLabel: 'slow', paramSize: '70B', description: 'DeepSeek R1 Distill Llama 70B - 免费推理模型', free: true },
+  'deepseek-ai/DeepSeek-V3-0324': { category: ['chat', 'code'], tags: ['open-source', 'flagship'], speedLabel: 'medium', paramSize: '671B MoE', description: 'DeepSeek V3 最新版 - 免费对话模型', free: true },
+  'Qwen/Qwen2.5-Coder-32B-Instruct': { category: ['code'], tags: ['open-source', 'code'], speedLabel: 'fast', paramSize: '32B', description: '通义千问Coder 32B - 免费编程模型', free: true },
+  'Qwen/QwQ-32B': { category: ['chat', 'reasoning'], tags: ['reasoning', 'open-source'], speedLabel: 'medium', paramSize: '32B', description: 'QwQ 32B 推理模型 - 免费推理', free: true },
+  'meta-llama/Llama-3.3-70B-Instruct': { category: ['chat', 'code'], tags: ['open-source'], speedLabel: 'medium', paramSize: '70B', description: 'Llama 3.3 70B - 免费开源模型', free: true },
+  'mistralai/Mistral-7B-Instruct-v0.3': { category: ['chat'], tags: ['open-source', 'lightweight'], speedLabel: 'fast', paramSize: '7B', description: 'Mistral 7B v0.3 - 免费轻量模型', free: true }
 }
 
 const PROVIDER_ICONS: Record<string, string> = {
@@ -120,7 +127,8 @@ const PROVIDER_ICONS: Record<string, string> = {
   siliconflow: '🌊',
   doubao: '🌋',
   qwen: '🤖',
-  ernie: '🔵'
+  ernie: '🔵',
+  free: '🆓'
 }
 
 function getCategoryIcon(cat: ModelCategory): ReactElement {

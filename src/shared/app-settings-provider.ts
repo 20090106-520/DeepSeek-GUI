@@ -23,7 +23,8 @@ import {
   SILICONFLOW_MODEL_IDS,
   DOUBAO_MODEL_IDS,
   QWEN_MODEL_IDS,
-  ERNIE_MODEL_IDS
+  ERNIE_MODEL_IDS,
+  FREE_MODEL_IDS
 } from './default-composer-models'
 
 const DEFAULT_MODEL_PROVIDER_NAME = 'DeepSeek'
@@ -104,6 +105,13 @@ export const PRESET_PROVIDERS: Record<string, {
     baseUrl: 'https://qianfan.baidubce.com/v2',
     endpointFormat: 'chat_completions',
     models: [...ERNIE_MODEL_IDS]
+  },
+  free: {
+    id: 'free',
+    name: '🆓 免费模型',
+    baseUrl: 'https://api.siliconflow.cn/v1',
+    endpointFormat: 'chat_completions',
+    models: [...FREE_MODEL_IDS]
   }
 }
 
@@ -111,10 +119,11 @@ export type PresetProviderId = keyof typeof PRESET_PROVIDERS
 
 export function createPresetProviderProfile(presetId: PresetProviderId, apiKey: string): ModelProviderProfileV1 {
   const preset = PRESET_PROVIDERS[presetId]
+  const effectiveApiKey = apiKey.trim() || (presetId === 'free' ? 'sk-free-no-key-required' : '')
   return {
     id: preset.id,
     name: preset.name,
-    apiKey: apiKey.trim(),
+    apiKey: effectiveApiKey,
     baseUrl: normalizeDeepseekBaseUrl(preset.baseUrl),
     endpointFormat: preset.endpointFormat,
     models: [...preset.models]
@@ -123,10 +132,11 @@ export function createPresetProviderProfile(presetId: PresetProviderId, apiKey: 
 
 export function defaultModelProviderSettings(): ModelProviderSettingsV1 {
   const defaultProvider = defaultModelProviderProfile('', DEFAULT_DEEPSEEK_BASE_URL)
+  const freeProvider = createPresetProviderProfile('free', '')
   return {
     apiKey: defaultProvider.apiKey,
     baseUrl: defaultProvider.baseUrl,
-    providers: [defaultProvider]
+    providers: [defaultProvider, freeProvider]
   }
 }
 

@@ -100,3 +100,13 @@ export const ERNIE_MODEL_IDS = [
   'ernie-lite-pro-128k',
   'ernie-char-8k'
 ] as const
+
+export const FREE_MODEL_IDS = [
+  'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B',
+  'deepseek-ai/DeepSeek-R1-Distill-Llama-70B',
+  'deepseek-ai/DeepSeek-V3-0324',
+  'Qwen/Qwen2.5-Coder-32B-Instruct',
+  'Qwen/QwQ-32B',
+  'meta-llama/Llama-3.3-70B-Instruct',
+  'mistralai/Mistral-7B-Instruct-v0.3'
+] as const
