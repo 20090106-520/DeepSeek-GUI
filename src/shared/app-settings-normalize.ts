@@ -1,0 +1,173 @@
+import {
+  DEFAULT_GUI_UPDATE_CHANNEL,
+  DEFAULT_USER_PREFERENCES,
+  DEFAULT_AGNES_GENERATION_PROVIDER,
+  normalizeGuiUpdateChannel,
+  type AppBehaviorConfigV1,
+  type AppSettingsV1,
+  type AgnesGenerationProviderV1,
+  type ClawSettingsPatchV1,
+  type GuiUpdateConfigV1,
+  type NotificationConfigV1,
+  type ScheduleSettingsPatchV1,
+  type UserPreferenceV1,
+  type WriteSettingsPatchV1
+} from './app-settings-types'
+import { normalizeKeyboardShortcuts, type KeyboardShortcutsConfigV1 } from './keyboard-shortcuts'
+import {
+  defaultKunRuntimeSettings,
+  getKunRuntimeSettings,
+  kunSettingsEnvelope,
+  mergeKunRuntimeSettings,
+  migrateLegacyAppSettings
+} from './app-settings-kun'
+import { normalizeModelProviderSettings } from './app-settings-provider'
+import { normalizeDeepseekBaseUrl } from './app-settings-normalizers'
+import { normalizeClawSettings } from './app-settings-claw'
+import { normalizeScheduleSettings } from './app-settings-schedule'
+import { normalizeWriteSettings } from './app-settings-write'
+
+export function normalizeAppSettings(settings: AppSettingsV1): AppSettingsV1 {
+  const migrated = shouldMigrateLegacySettings(settings)
+    ? migrateLegacyAppSettings(settings as Parameters<typeof migrateLegacyAppSettings>[0])
+    : settings
+  const maybeSettings = migrated as AppSettingsV1 & {
+    appBehavior?: Partial<AppBehaviorConfigV1>
+    keyboardShortcuts?: Partial<KeyboardShortcutsConfigV1>
+    notifications?: Partial<NotificationConfigV1>
+    provider?: Parameters<typeof normalizeModelProviderSettings>[0]
+    write?: WriteSettingsPatchV1
+    claw?: ClawSettingsPatchV1
+    schedule?: ScheduleSettingsPatchV1
+    guiUpdate?: Partial<GuiUpdateConfigV1>
+  }
+  const runtime = getKunRuntimeSettings(maybeSettings)
+  return {
+    ...migrated,
+    version: 1,
+    locale: maybeSettings.locale === 'zh' ? 'zh' : 'en',
+    theme:
+      maybeSettings.theme === 'light' || maybeSettings.theme === 'dark' || maybeSettings.theme === 'system'
+        ? maybeSettings.theme
+        : 'system',
+    uiFontScale:
+      maybeSettings.uiFontScale === 'extraSmall' ||
+      maybeSettings.uiFontScale === 'small' ||
+      maybeSettings.uiFontScale === 'medium' ||
+      maybeSettings.uiFontScale === 'large' ||
+      maybeSettings.uiFontScale === 'extraLarge'
+        ? maybeSettings.uiFontScale
+        : 'small',
+    accentColor:
+      maybeSettings.accentColor === 'blue' ||
+      maybeSettings.accentColor === 'purple' ||
+      maybeSettings.accentColor === 'green' ||
+      maybeSettings.accentColor === 'orange' ||
+      maybeSettings.accentColor === 'pink' ||
+      maybeSettings.accentColor === 'cyan'
+        ? maybeSettings.accentColor
+        : 'blue',
+    modelProvider: normalizeModelProviderSelection(maybeSettings.modelProvider),
+    provider: normalizeModelProviderSettings(maybeSettings.provider),
+    agents: kunSettingsEnvelope(mergeKunRuntimeSettings(defaultKunRuntimeSettings(), {
+      ...runtime,
+      baseUrl: runtime.baseUrl.trim() ? normalizeDeepseekBaseUrl(runtime.baseUrl) : ''
+    })),
+    workspaceRoot: typeof maybeSettings.workspaceRoot === 'string' ? maybeSettings.workspaceRoot : '',
+    log: {
+      enabled: maybeSettings.log?.enabled !== false,
+      retentionDays: typeof maybeSettings.log?.retentionDays === 'number' ? maybeSettings.log.retentionDays : 2
+    },
+    notifications: {
+      turnComplete: maybeSettings.notifications?.turnComplete !== false
+    },
+    appBehavior: normalizeAppBehaviorSettings(maybeSettings.appBehavior),
+    keyboardShortcuts: normalizeKeyboardShortcuts(maybeSettings.keyboardShortcuts),
+    write: normalizeWriteSettings(maybeSettings.write),
+    claw: normalizeClawSettings(maybeSettings.claw),
+    schedule: normalizeScheduleSettings(maybeSettings.schedule),
+    guiUpdate: {
+      channel: normalizeGuiUpdateChannel(
+        maybeSettings.guiUpdate?.channel ?? DEFAULT_GUI_UPDATE_CHANNEL
+      )
+    },
+    agnesGeneration: normalizeAgnesGenerationSettings(maybeSettings.agnesGeneration),
+    codePromptPrefix: typeof maybeSettings.codePromptPrefix === 'string' ? maybeSettings.codePromptPrefix : '',
+    preferences: normalizeUserPreferences(maybeSettings.preferences)
+  }
+}
+
+export function normalizeUserPreferences(preferences?: Partial<UserPreferenceV1>): UserPreferenceV1 {
+  return {
+    ...DEFAULT_USER_PREFERENCES,
+    ...preferences
+  }
+}
+
+export function normalizeAppBehaviorSettings(
+  settings?: Partial<AppBehaviorConfigV1>
+): AppBehaviorConfigV1 {
+  const openAtLogin = settings?.openAtLogin === true
+  return {
+    openAtLogin,
+    startMinimized: openAtLogin && settings?.startMinimized === true,
+    closeToTray: settings?.closeToTray === true
+  }
+}
+
+export function normalizeAgnesGenerationSettings(
+  settings?: Partial<AgnesGenerationProviderV1>
+): AgnesGenerationProviderV1 {
+  const merged = {
+    ...DEFAULT_AGNES_GENERATION_PROVIDER,
+    ...settings
+  }
+  const legacyImageModels = ['stabilityai/stable-diffusion-3-5-large', 'stabilityai/stable-diffusion-xl-base-1.0']
+  if (legacyImageModels.includes(merged.imageModel)) {
+    merged.imageModel = DEFAULT_AGNES_GENERATION_PROVIDER.imageModel
+  }
+  const legacyVideoModels = ['tencent/HunyuanVideo']
+  if (legacyVideoModels.includes(merged.videoModel)) {
+    merged.videoModel = DEFAULT_AGNES_GENERATION_PROVIDER.videoModel
+  }
+  if (merged.baseUrl === 'https://api.siliconflow.cn/v1') {
+    merged.baseUrl = DEFAULT_AGNES_GENERATION_PROVIDER.baseUrl
+  }
+  return merged
+}
+
+export function normalizeModelProviderSelection(
+  selection?: Partial<{ id: string; name: string }> | undefined
+): { id: string; name: string } {
+  const id = typeof selection?.id === 'string' && selection.id.trim() ? selection.id.trim() : 'deepseek'
+  const names: Record<string, string> = {
+    deepseek: 'DeepSeek',
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+    gemini: 'Google Gemini',
+    custom: 'Custom'
+  }
+  return {
+    id,
+    name: typeof selection?.name === 'string' && selection.name.trim() ? selection.name.trim() : (names[id] || 'Custom')
+  }
+}
+
+function shouldMigrateLegacySettings(settings: AppSettingsV1): boolean {
+  const raw = settings as AppSettingsV1 & {
+    agentProvider?: unknown
+    deepseek?: unknown
+    agents?: {
+      kun?: Partial<ReturnType<typeof defaultKunRuntimeSettings>>
+      codewhale?: unknown
+      reasonix?: unknown
+    }
+  }
+  if (!raw.agents?.kun) return true
+  if ('agentProvider' in raw || 'deepseek' in raw) return true
+  if (raw.agents.codewhale || raw.agents.reasonix) return true
+  const dataDir = typeof raw.agents.kun.dataDir === 'string'
+    ? raw.agents.kun.dataDir.replace(/\\/g, '/').toLowerCase()
+    : ''
+  return dataDir === '~/.deepseekgui/coreagent' || dataDir.endsWith('/.deepseekgui/coreagent')
+}
