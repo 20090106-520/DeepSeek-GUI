@@ -112,6 +112,9 @@ const WorkflowView = lazy(() =>
 const ModelMarketView = lazy(() =>
   import('./ModelMarketView').then((module) => ({ default: module.ModelMarketView }))
 )
+const NovelForgeView = lazy(() =>
+  import('./NovelForgeView').then((module) => ({ default: module.NovelForgeView }))
+)
 
 type PendingSddPlanTarget = {
   planId: string
@@ -1477,13 +1480,18 @@ export function Workbench(): ReactElement {
     setRoute('modelMarket')
   }
 
+  const openNovelForgeView = (): void => {
+    setConnectPhoneSidebarOpen(false)
+    setRoute('novelForge')
+  }
+
   const toggleConnectPhone = (): void => {
     if (activeSddDraft) dismissActiveSddDraft({ closeAssistant: true })
     openClaw()
     setConnectPhoneSidebarOpen((open) => !open)
   }
 
-  const sidebarView: 'chat' | 'write' | 'claw' | 'schedule' | 'drama' | 'workflow' | 'modelMarket' =
+  const sidebarView: 'chat' | 'write' | 'claw' | 'schedule' | 'drama' | 'workflow' | 'modelMarket' | 'novelForge' =
     route === 'claw' || (route === 'plugins' && pluginHostRoute === 'claw')
       ? 'claw'
       : route === 'schedule'
@@ -1494,6 +1502,8 @@ export function Workbench(): ReactElement {
         ? 'workflow'
       : route === 'modelMarket'
         ? 'modelMarket'
+      : route === 'novelForge'
+        ? 'novelForge'
       : route === 'write'
         ? 'write'
         : 'chat'
@@ -1703,6 +1713,7 @@ export function Workbench(): ReactElement {
               onDramaOpen={openDramaView}
               onWorkflowOpen={openWorkflowView}
               onModelMarketOpen={openModelMarketView}
+              onNovelForgeOpen={openNovelForgeView}
               onToggleSidebar={toggleLeftSidebar}
             />
             )}
@@ -1761,6 +1772,19 @@ export function Workbench(): ReactElement {
             </div>
             <Suspense fallback={<div className="h-full bg-ds-main" />}>
               <ModelMarketView />
+            </Suspense>
+          </>
+        ) : route === 'novelForge' ? (
+          <>
+            <div className="flex h-12 shrink-0 items-center justify-end px-3">
+              <SidebarTitlebarToggleButton
+                onClick={toggleLeftSidebar}
+                title={leftSidebarCollapsed ? t('sidebarExpand') : t('sidebarCollapse')}
+                ariaLabel={leftSidebarCollapsed ? t('sidebarExpand') : t('sidebarCollapse')}
+              />
+            </div>
+            <Suspense fallback={<div className="h-full bg-ds-main" />}>
+              <NovelForgeView />
             </Suspense>
           </>
         ) : route === 'write' ? (

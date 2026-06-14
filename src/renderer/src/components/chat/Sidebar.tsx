@@ -11,7 +11,8 @@ import {
   Settings,
   Smartphone,
   Workflow,
-  Sparkles
+  Sparkles,
+  BookOpen
 } from 'lucide-react'
 import type { NormalizedThread } from '../../agent/types'
 import { useChatStore, type SettingsRouteSection } from '../../store/chat-store'
@@ -34,7 +35,7 @@ import {
 type Props = {
   threads: NormalizedThread[]
   activeThreadId: string | null
-  activeView: 'chat' | 'write' | 'claw' | 'schedule' | 'drama' | 'workflow' | 'modelMarket'
+  activeView: 'chat' | 'write' | 'claw' | 'schedule' | 'drama' | 'workflow' | 'modelMarket' | 'novelForge'
   connectPhoneSidebarOpen: boolean
   pluginsActive: boolean
   runtimeReady: boolean
@@ -58,6 +59,7 @@ type Props = {
   onScheduleOpen: () => void
   onDramaOpen: () => void
   onWorkflowOpen: () => void
+  onNovelForgeOpen: () => void
   onModelMarketOpen: () => void
   onToggleSidebar: () => void
 }
@@ -89,6 +91,7 @@ export function Sidebar({
   onScheduleOpen,
   onDramaOpen,
   onWorkflowOpen,
+  onNovelForgeOpen,
   onModelMarketOpen,
   onToggleSidebar
 }: Props): ReactElement {
@@ -199,6 +202,12 @@ export function Sidebar({
           label={t('modelMarket')}
           onClick={onModelMarketOpen}
           active={activeView === 'modelMarket'}
+        />
+        <SidebarCommandRow
+          icon={<BookOpen className="h-4 w-4" strokeWidth={1.75} />}
+          label="小说创作"
+          onClick={onNovelForgeOpen}
+          active={activeView === 'novelForge'}
         />
       </div>
 
