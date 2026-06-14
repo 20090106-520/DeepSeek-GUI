@@ -63,6 +63,13 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "better-sqlite3": "^12.10.0",
     "diff": "^8.0.4",
+    "eventsource": "^4.1.0",
+    "ky": "^2.0.2",
+    "p-limit": "^7.3.0",
+    "p-queue": "^9.3.0",
+    "p-retry": "^8.0.0",
+    "p-timeout": "^7.0.1",
+    "quick-lru": "^7.3.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

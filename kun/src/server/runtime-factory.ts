@@ -11,6 +11,7 @@ import { FileSessionStore, FileThreadStore } from '../adapters/file/index.js'
 import { HybridSessionStore, HybridThreadStore } from '../adapters/hybrid/index.js'
 import { DeepseekCompatModelClient } from '../adapters/model/deepseek-compat-model-client.js'
 import { createResilientModelClient } from '../adapters/model/resilient-model-client.js'
+import { createOpenSourceResilientModelClient } from '../adapters/model/opensource-resilient-model-client.js'
 import { CapabilityRegistry } from '../adapters/tool/capability-registry.js'
 import { buildGoalLocalTools } from '../adapters/tool/goal-tools.js'
 import { buildTodoLocalTools } from '../adapters/tool/todo-tools.js'
@@ -150,38 +151,54 @@ export async function createKunServeRuntime(
     fallbackApiKey: process.env.KUN_FALLBACK_API_KEY || undefined,
     fallbackModel: process.env.KUN_FALLBACK_MODEL || undefined
   })
-  const modelClient = createResilientModelClient(baseModelClient, {
-    retry: {
-      maxRetries: 3,
-      baseDelayMs: 1_000,
-      maxDelayMs: 30_000,
-      backoffMultiplier: 2,
-      jitter: true
-    },
-    queue: {
-      maxConcurrent: 4,
-      perKeyMaxConcurrent: 2,
-      queueTimeoutMs: 120_000
-    },
-    cache: {
-      enabled: true,
-      maxEntries: 64,
-      ttlMs: 5 * 60 * 1_000
-    },
-    circuitBreaker: {
-      failureThreshold: 5,
-      resetTimeoutMs: 30_000,
-      halfOpenMaxAttempts: 1,
-      monitorWindowMs: 60_000
-    },
-    connectionPool: {
-      maxConnections: 6,
-      keepAliveTimeoutMs: 30_000,
-      requestTimeoutMs: 120_000,
-      dnsCacheTtlMs: 60_000
-    },
-    performanceMonitoring: true
-  })
+  const useOpenSourceLibs = process.env.KUN_USE_OPENSOURCE_LIBS !== 'false'
+  const modelClient = useOpenSourceLibs
+    ? createOpenSourceResilientModelClient(baseModelClient, {
+        concurrency: { maxConcurrent: 4, perKeyMaxConcurrent: 2 },
+        retry: { retries: 3, factor: 2, minTimeout: 1_000, maxTimeout: 30_000, randomize: true },
+        queue: { concurrency: 4, timeout: 120_000 },
+        timeout: { connectTimeoutMs: 10_000, readTimeoutMs: 120_000 },
+        cache: { enabled: true, maxSize: 64, ttlMs: 5 * 60 * 1_000 },
+        circuitBreaker: {
+          failureThreshold: 5,
+          resetTimeoutMs: 30_000,
+          halfOpenMaxAttempts: 1,
+          monitorWindowMs: 60_000
+        },
+        performanceMonitoring: true
+      })
+    : createResilientModelClient(baseModelClient, {
+        retry: {
+          maxRetries: 3,
+          baseDelayMs: 1_000,
+          maxDelayMs: 30_000,
+          backoffMultiplier: 2,
+          jitter: true
+        },
+        queue: {
+          maxConcurrent: 4,
+          perKeyMaxConcurrent: 2,
+          queueTimeoutMs: 120_000
+        },
+        cache: {
+          enabled: true,
+          maxEntries: 64,
+          ttlMs: 5 * 60 * 1_000
+        },
+        circuitBreaker: {
+          failureThreshold: 5,
+          resetTimeoutMs: 30_000,
+          halfOpenMaxAttempts: 1,
+          monitorWindowMs: 60_000
+        },
+        connectionPool: {
+          maxConnections: 6,
+          keepAliveTimeoutMs: 30_000,
+          requestTimeoutMs: 120_000,
+          dnsCacheTtlMs: 60_000
+        },
+        performanceMonitoring: true
+      })
   const modelProfiles = modelContextProfilesFromConfig({
     contextCompaction: options.contextCompaction,
     models: options.models
