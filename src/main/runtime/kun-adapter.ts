@@ -1,6 +1,7 @@
 import { app } from 'electron'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
 import {
   DEFAULT_KUN_DATA_DIR,
   getKunRuntimeSettings,
@@ -26,12 +27,75 @@ function appRoot(): string {
     : app.getAppPath()
 }
 
+function ensureKunDistExtracted(): string {
+  const unpackedRoot = appRoot()
+  const serveEntry = join(unpackedRoot, 'kun', 'dist', 'cli', 'serve-entry.js')
+  if (existsSync(serveEntry)) return unpackedRoot
+
+  const asarRoot = app.getAppPath()
+  const asarEntry = join(asarRoot, 'kun', 'dist', 'cli', 'serve-entry.js')
+  if (!existsSync(asarEntry)) return unpackedRoot
+
+  const userDataDir = app.getPath('userData')
+  const extractDir = join(userDataDir, 'kun-extracted')
+  const extractedEntry = join(extractDir, 'kun', 'dist', 'cli', 'serve-entry.js')
+  if (existsSync(extractedEntry)) return extractDir
+
+  const entriesToExtract = [
+    'kun/dist/cli/serve-entry.js',
+    'kun/package.json'
+  ]
+
+  for (const relPath of entriesToExtract) {
+    const src = join(asarRoot, relPath)
+    const dst = join(extractDir, relPath)
+    if (!existsSync(src)) continue
+    mkdirSync(dirname(dst), { recursive: true })
+    try {
+      const content = readFileSync(src, 'utf-8')
+      writeFileSync(dst, content, 'utf-8')
+    } catch { /* skip individual failures */ }
+  }
+
+  const kunDistDir = join(asarRoot, 'kun', 'dist')
+  if (existsSync(kunDistDir)) {
+    extractDirRecursive(asarRoot, extractDir, 'kun/dist')
+  }
+
+  return existsSync(extractedEntry) ? extractDir : unpackedRoot
+}
+
+function extractDirRecursive(srcRoot: string, dstRoot: string, relDir: string): void {
+  const { readdirSync, statSync } = require('node:fs') as typeof import('node:fs')
+  const srcDir = join(srcRoot, relDir)
+  const dstDir = join(dstRoot, relDir)
+  try {
+    const entries = readdirSync(srcDir, { withFileTypes: true })
+    mkdirSync(dstDir, { recursive: true })
+    for (const entry of entries) {
+      const srcPath = join(relDir, entry.name)
+      if (entry.isDirectory()) {
+        extractDirRecursive(srcRoot, dstRoot, srcPath)
+      } else if (entry.isFile() && entry.name.endsWith('.js')) {
+        const dst = join(dstRoot, srcPath)
+        if (!existsSync(dst)) {
+          try {
+            const content = readFileSync(join(srcRoot, srcPath), 'utf-8')
+            writeFileSync(dst, content, 'utf-8')
+          } catch { /* skip */ }
+        }
+      }
+    }
+  } catch { /* skip */ }
+}
+
 export const kunRuntimeAdapter = {
   id: KUN_RUNTIME_ID,
 
   async resolveExecutable(settings: AppSettingsV1): Promise<string> {
     const runtime = getKunRuntimeSettings(settings)
-    const resolution = resolveKunExecutable(appRoot(), runtime.binaryPath)
+    const root = app.isPackaged ? ensureKunDistExtracted() : appRoot()
+    const resolution = resolveKunExecutable(root, runtime.binaryPath)
     if (resolution.kind === 'node-script') {
       const scriptPath = resolution.args[0] ?? ''
       return runtime.binaryPath.trim()
@@ -42,7 +106,7 @@ export const kunRuntimeAdapter = {
   },
 
   ensureRunning(settings: AppSettingsV1): Promise<void> {
-    return startKunChild(settings)
+    return startKunChild(settings, app.isPackaged ? ensureKunDistExtracted() : undefined)
   },
 
   stopAndWait(): Promise<void> {
