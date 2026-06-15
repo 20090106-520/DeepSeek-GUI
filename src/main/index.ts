@@ -1112,13 +1112,31 @@ app.whenReady().then(async () => {
     console.warn('[deepseek-gui] prune logs:', err)
   })
 
-  if (resolveConfiguredApiKey(initial)) {
-    setTimeout(() => {
-      void kunRuntimeAdapter.resolveExecutable(initial).catch((err) => {
-        console.warn('[deepseek-gui] prewarm Kun binary:', err)
-      })
-    }, 1500)
+  if (resolveConfiguredApiKey(initial) || tryFallbackToFreeProvider(initial)) {
+    traceStartup('prewarm-kun:start')
+    void ensureRuntime(initial).then(() => {
+      traceStartup('prewarm-kun:done')
+    }).catch((err) => {
+      console.warn('[deepseek-gui] prewarm Kun runtime:', err)
+      traceStartup('prewarm-kun:failed')
+    })
   }
+
+  traceStartup('prewarm-novelforge:start')
+  void (async () => {
+    try {
+      const { getNovelForgeManager } = await import('./runtime/novelforge-process.js')
+      const nfManager = getNovelForgeManager()
+      const nfResult = await nfManager.start()
+      if (nfResult.success) {
+        traceStartup('prewarm-novelforge:done')
+      } else {
+        traceStartup('prewarm-novelforge:skipped', { message: nfResult.message })
+      }
+    } catch (err) {
+      traceStartup('prewarm-novelforge:failed')
+    }
+  })()
 
   app.on('second-instance', () => {
     revealMainWindow()
