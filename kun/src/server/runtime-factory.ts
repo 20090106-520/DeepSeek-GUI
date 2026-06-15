@@ -149,7 +149,10 @@ export async function createKunServeRuntime(
     model: options.model,
     fallbackBaseUrl: process.env.KUN_FALLBACK_BASE_URL || undefined,
     fallbackApiKey: process.env.KUN_FALLBACK_API_KEY || undefined,
-    fallbackModel: process.env.KUN_FALLBACK_MODEL || undefined
+    fallbackModel: process.env.KUN_FALLBACK_MODEL || undefined,
+    useKy: process.env.KUN_USE_KY === 'true',
+    kyTimeoutMs: 30_000,
+    kyRetryLimit: 2
   })
   const useOpenSourceLibs = process.env.KUN_USE_OPENSOURCE_LIBS !== 'false'
   const modelClient = useOpenSourceLibs

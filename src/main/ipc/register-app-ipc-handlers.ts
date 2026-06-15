@@ -1066,4 +1066,23 @@ export function registerAppIpcHandlers(options: RegisterAppIpcHandlersOptions): 
       return { ok: false, message: e instanceof Error ? e.message : String(e) }
     }
   })
+
+  ipcMain.handle('novelforge:start', async () => {
+    const { getNovelForgeManager } = await import('../runtime/novelforge-process.js')
+    const manager = getNovelForgeManager()
+    return manager.start()
+  })
+
+  ipcMain.handle('novelforge:status', async () => {
+    const { getNovelForgeManager } = await import('../runtime/novelforge-process.js')
+    const manager = getNovelForgeManager()
+    return { state: manager.getState(), port: manager.getPort() }
+  })
+
+  ipcMain.handle('novelforge:stop', async () => {
+    const { getNovelForgeManager } = await import('../runtime/novelforge-process.js')
+    const manager = getNovelForgeManager()
+    manager.stop()
+    return { success: true }
+  })
 }

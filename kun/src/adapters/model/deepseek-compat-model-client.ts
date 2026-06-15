@@ -5,6 +5,8 @@ import { estimateDeepseekCacheSavings, estimateDeepseekCost } from './deepseek-p
 import { isToolResultBridgeItem, repairModelHistoryItems } from '../../domain/model-history-repair.js'
 import { repairToolArguments } from './tool-argument-repair.js'
 import { isDeepSeekHost, probeDeepSeekReachable } from './model-error-probe.js'
+import { SseStateParser } from './sse-state-parser.js'
+import { createKyFetchAdapter } from './ky-fetch-adapter.js'
 import {
   DEFAULT_MODEL_ENDPOINT_FORMAT,
   modelEndpointPath,
@@ -30,6 +32,9 @@ export type DeepseekCompatConfig = {
   fallbackBaseUrl?: string
   fallbackApiKey?: string
   fallbackModel?: string
+  useKy?: boolean
+  kyTimeoutMs?: number
+  kyRetryLimit?: number
 }
 
 type ChatMessage = {
@@ -143,7 +148,14 @@ export class DeepseekCompatModelClient implements ModelClient {
   constructor(config: DeepseekCompatConfig) {
     this.config = config
     this.model = config.model
-    this.fetchImpl = config.fetchImpl ?? fetch
+    if (config.useKy) {
+      this.fetchImpl = createKyFetchAdapter({
+        timeoutMs: config.kyTimeoutMs,
+        retryLimit: config.kyRetryLimit
+      })
+    } else {
+      this.fetchImpl = config.fetchImpl ?? fetch
+    }
   }
 
   /**
@@ -708,7 +720,7 @@ export class DeepseekCompatModelClient implements ModelClient {
   ): AsyncIterable<ModelStreamChunk> {
     const decoder = new TextDecoder('utf-8')
     const reader = body.getReader()
-    let buffer = ''
+    const sseParser = new SseStateParser()
     const pendingArguments = new Map<string, PendingToolCall>()
     const pendingByIndex = new Map<number, string>()
     const completedToolCalls = new Set<string>()
@@ -737,16 +749,14 @@ export class DeepseekCompatModelClient implements ModelClient {
         }
         const { value, done } = read
         if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        let boundary: number
-        while ((boundary = buffer.indexOf('\n\n')) >= 0) {
-          const frame = buffer.slice(0, boundary)
-          buffer = buffer.slice(boundary + 2)
-          const dataLines = frame
-            .split('\n')
-            .filter((line) => line.startsWith('data:'))
-            .map((line) => line.slice(5).trim())
-            .join('')
+        const chunk = decoder.decode(value, { stream: true })
+        const frames = sseParser.feed(chunk)
+        for (const frame of frames) {
+          if (frame.event === 'error') {
+            yield { kind: 'error', message: frame.data, code: 'sse_event_error' }
+            continue
+          }
+          const dataLines = frame.data
           if (!dataLines) continue
           if (dataLines === '[DONE]') {
             finishReason = finishReason ?? 'stop'

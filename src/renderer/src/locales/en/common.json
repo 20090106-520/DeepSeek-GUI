@@ -1018,6 +1018,7 @@
   "turnCompleteNotificationBody": "“{{title}}” is ready.",
   "busyTimeout": "No response from the runtime after waiting {{minutes}} minutes. Deep-thinking tasks may take longer. If it stays stuck, you can cancel and retry.",
   "runtimeActionNeedsConnection": "Connect to the runtime first (see status bar).",
+  "offlineCacheLoaded": "Network unavailable, loaded conversation from local cache.",
   "runtimeFetchFailed": "Could not reach Kun. Make sure `kun serve` is running, or enable auto-start in Settings.",
   "runtimeBinaryNotInstalled": "The Kun CLI was not found. Run `npm install` in the DeepSeek-GUI folder to fetch it, or set the binary path in Settings.",
   "runtimeMissingApiKey": "DeepSeek API Key is missing. Open Settings and add it before the GUI can start the local runtime.",

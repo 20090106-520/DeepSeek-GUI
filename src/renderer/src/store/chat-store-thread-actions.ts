@@ -22,6 +22,7 @@ import {
 import { workspaceLabelFromPath } from '../lib/workspace-label'
 import { isInternalTemporaryWorkspace, normalizeWorkspaceRoot } from '../lib/workspace-path'
 import { buildClawRuntimePrompt, buildCodeRuntimePrompt, getActiveAgentApiKey } from '@shared/app-settings'
+import { getOfflineDB } from '../lib/offline-db'
 import type { ChatState, ChatStoreGet, ChatStoreSet } from './chat-store-types'
 import {
   activeClawChannel,
@@ -310,6 +311,7 @@ export function createThreadActions(
         inspectorSelectedId: null,
         queuedMessages: []
       })
+      getOfflineDB().saveThread(id, JSON.stringify({ rawBlocks, latestSeq, threadStatus, latestTurnId, latestUserMessageId, turnDurationByUserId, goal, todos }), (blocks[0] as { text?: string } | undefined)?.text?.slice(0, 80) ?? id).catch(() => {})
       syncTurnCompletionPoll(set, get)
       const ac = new AbortController()
       sseAbortRef.current = ac
@@ -317,6 +319,39 @@ export function createThreadActions(
       subscribeThreadEventsWithRecovery(p, id, latestSeq, sink, ac.signal, get)
       if (busy) armBusyWatchdog(set, get)
     } catch (e) {
+      try {
+        const cached = await getOfflineDB().loadThread(id)
+        if (cached) {
+          const parsed = JSON.parse(cached) as { rawBlocks: unknown[]; latestSeq: number; threadStatus?: string; latestTurnId?: string; latestUserMessageId?: string; turnDurationByUserId?: Record<string, number>; goal?: unknown; todos?: unknown }
+          const blocks = hydrateBlockModelLabels(id, parsed.rawBlocks as any[])
+          const busy = threadSnapshotLooksRunning(blocks, parsed.threadStatus)
+          const currentTurnUserId = busy
+            ? parsed.latestUserMessageId ?? findLatestUserBlockId(blocks)
+            : null
+          set({
+            watchTurnCompletion: nextWatch,
+            unreadThreadIds: nextUnread,
+            activeThreadId: id,
+            activeThreadGoal: null,
+            activeThreadTodos: null,
+            blocks,
+            lastSeq: parsed.latestSeq,
+            liveReasoning: '',
+            liveAssistant: '',
+            error: i18n.t('common:offlineCacheLoaded'),
+            busy,
+            currentTurnId: busy ? parsed.latestTurnId ?? null : null,
+            currentTurnUserId,
+            turnStartedAtByUserId: {},
+            turnDurationByUserId: parsed.turnDurationByUserId ?? {},
+            turnReasoningFirstAtByUserId: {},
+            turnReasoningLastAtByUserId: {},
+            inspectorSelectedId: null,
+            queuedMessages: []
+          })
+          return
+        }
+      } catch { /* offline cache miss */ }
       set({
         error: formatRuntimeError(e),
         ...(shouldOpenSettingsForError(e)

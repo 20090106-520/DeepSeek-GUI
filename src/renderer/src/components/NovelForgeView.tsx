@@ -11,11 +11,28 @@ import {
   ExternalLink,
   Loader2,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Play,
+  Square
 } from 'lucide-react'
 import { useChatStore } from '../store/chat-store'
 
 type NovelForgeStatus = 'unknown' | 'starting' | 'running' | 'error'
+
+declare global {
+  interface Window {
+    electronAPI?: {
+      invoke: (channel: string, ...args: unknown[]) => Promise<unknown>
+    }
+  }
+}
+
+async function invokeIpc(channel: string, ...args: unknown[]): Promise<unknown> {
+  if (window.electronAPI?.invoke) {
+    return window.electronAPI.invoke(channel, ...args)
+  }
+  return null
+}
 
 export function NovelForgeView(): ReactElement {
   const { t } = useTranslation()
@@ -26,19 +43,46 @@ export function NovelForgeView(): ReactElement {
     setStatus('starting')
     setErrorMsg('')
     try {
-      const response = await fetch('http://127.0.0.1:54321/health', {
-        signal: AbortSignal.timeout(3_000)
-      })
-      if (response.ok) {
+      const result = await invokeIpc('novelforge:start') as { success: boolean; message: string } | null
+      if (result?.success) {
         setStatus('running')
         window.open('http://127.0.0.1:54321', '_blank')
       } else {
         setStatus('error')
-        setErrorMsg('NovelForge 服务未响应')
+        setErrorMsg(result?.message ?? 'NovelForge 启动失败')
       }
     } catch {
       setStatus('error')
-      setErrorMsg('NovelForge 服务未启动，请先运行 novelforge/backend/main.py')
+      setErrorMsg('NovelForge 启动失败，请检查 Python 环境和依赖')
+    }
+  }, [])
+
+  const handleStopNovelForge = useCallback(async () => {
+    try {
+      await invokeIpc('novelforge:stop')
+      setStatus('unknown')
+    } catch { /* ignore */ }
+  }, [])
+
+  const handleCheckStatus = useCallback(async () => {
+    try {
+      const result = await invokeIpc('novelforge:status') as { state: string; port: number } | null
+      if (result?.state === 'running') {
+        setStatus('running')
+      } else if (result?.state === 'starting') {
+        setStatus('starting')
+      } else {
+        setStatus('unknown')
+      }
+    } catch {
+      try {
+        const response = await fetch('http://127.0.0.1:54321/health', {
+          signal: AbortSignal.timeout(3_000)
+        })
+        setStatus(response.ok ? 'running' : 'unknown')
+      } catch {
+        setStatus('unknown')
+      }
     }
   }, [])
 
@@ -112,15 +156,33 @@ export function NovelForgeView(): ReactElement {
         </div>
 
         {/* Launch Button */}
-        <div className="flex justify-center">
+        <div className="flex justify-center gap-3">
           <button
             onClick={handleStartNovelForge}
             disabled={status === 'starting'}
             className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:brightness-110 disabled:opacity-50"
           >
-            <ExternalLink className="h-4 w-4" />
-            打开 NovelForge
+            <Play className="h-4 w-4" />
+            启动 NovelForge
           </button>
+          {status === 'running' && (
+            <button
+              onClick={handleStopNovelForge}
+              className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              <Square className="h-4 w-4" />
+              停止
+            </button>
+          )}
+          {status === 'running' && (
+            <button
+              onClick={() => window.open('http://127.0.0.1:54321', '_blank')}
+              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:bg-emerald-700"
+            >
+              <ExternalLink className="h-4 w-4" />
+              打开界面
+            </button>
+          )}
         </div>
 
         {/* Setup Guide */}
