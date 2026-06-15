@@ -148,6 +148,15 @@ function resolveConfiguredApiKey(settings: AppSettingsV1): string {
   return ''
 }
 
+function isProviderValid(settings: AppSettingsV1): boolean {
+  const providerSettings = settings.provider ?? {}
+  const providers = Array.isArray(providerSettings.providers) ? providerSettings.providers : []
+  const providerId = settings.agents?.kun?.providerId ?? ''
+  if (providerId === 'free') return true
+  if (providerId === 'deepseek') return true
+  return providers.some((p: any) => p.id === providerId)
+}
+
 function runtimeJsonError(code: string, message: string): Error {
   return runtimeErrorToError({ code: code as RuntimeErrorCode, message })
 }
@@ -640,11 +649,12 @@ async function ensureKunRuntime(settings: AppSettingsV1): Promise<void> {
     throw runtimeJsonError(threadApi.error, threadApi.message)
   }
 
-  if (!hasApiKey) {
+  if (!hasApiKey || !isProviderValid(settings)) {
     const freeFallback = tryFallbackToFreeProvider(settings)
     if (freeFallback) {
       settings = freeFallback
-    } else {
+      void store.patch({ agents: { kun: { providerId: 'free', model: freeFallback.agents?.kun?.model } } }).catch(() => {})
+    } else if (!hasApiKey) {
       throw runtimeJsonError(
         'missing_api_key',
         'DeepSeek API Key is required before the GUI can start Kun.'
