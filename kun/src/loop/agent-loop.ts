@@ -457,9 +457,11 @@ export class AgentLoop {
     const activePlanContext = turn?.guiPlan
       ? { ...turn.guiPlan, turnId }
       : this.opts.activePlanContext
-    const budgetGate = await this.checkBudgetGate(thread, threadId, turnId)
+    const [budgetGate, loadedItems] = await Promise.all([
+      this.checkBudgetGate(thread, threadId, turnId),
+      this.opts.sessionStore.loadItems(threadId)
+    ])
     if (budgetGate === 'blocked') return 'stop'
-    const loadedItems = await this.opts.sessionStore.loadItems(threadId)
     const healed = healLoadedHistoryItems(loadedItems)
     if (healed.changed) {
       await this.opts.sessionStore.rewriteItems(threadId, healed.items)
@@ -504,25 +506,27 @@ export class AgentLoop {
     })
     const model = modelRoute.model
     const modelCapabilities = this.opts.modelCapabilities?.(model) ?? modelCapabilitiesForModel(model)
-    const attachments = await this.resolveAttachments({
-      attachmentIds: turn?.attachmentIds ?? [],
-      threadId,
-      workspace: thread?.workspace ?? '',
-      modelCapabilities
-    })
-    const skillResolution = this.opts.skillRuntime?.resolveTurn({
-      prompt: turn?.prompt ?? '',
-      workspace: thread?.workspace ?? ''
-    }) ?? {
-      activeSkillIds: [],
-      activations: [],
-      instructions: [],
-      injectedBytes: 0
-    }
-    const memories = await this.retrieveMemories({
-      prompt: turn?.prompt ?? '',
-      workspace: thread?.workspace ?? ''
-    })
+    const [attachments, skillResolution, memories] = await Promise.all([
+      this.resolveAttachments({
+        attachmentIds: turn?.attachmentIds ?? [],
+        threadId,
+        workspace: thread?.workspace ?? '',
+        modelCapabilities
+      }),
+      Promise.resolve(this.opts.skillRuntime?.resolveTurn({
+        prompt: turn?.prompt ?? '',
+        workspace: thread?.workspace ?? ''
+      }) ?? {
+        activeSkillIds: [],
+        activations: [],
+        instructions: [],
+        injectedBytes: 0
+      }),
+      this.retrieveMemories({
+        prompt: turn?.prompt ?? '',
+        workspace: thread?.workspace ?? ''
+      })
+    ])
     const planTurnActive = effectiveMode === 'plan' || Boolean(activePlanContext)
     const activeGoalInstruction = planTurnActive
       ? null
@@ -682,7 +686,7 @@ export class AgentLoop {
         case 'assistant_text_delta':
           textItemId ||= this.opts.ids.next('item_text')
           textAccumulator.value += chunk.text
-          await this.opts.events.record({
+          this.opts.events.record({
             kind: 'assistant_text_delta',
             threadId,
             turnId,
@@ -694,12 +698,12 @@ export class AgentLoop {
               text: chunk.text,
               status: 'running'
             })
-          })
+          }).catch(() => {})
           break
         case 'assistant_reasoning_delta':
           reasoningItemId ||= this.opts.ids.next('item_reasoning')
           reasoningAccumulator.value += chunk.text
-          await this.opts.events.record({
+          this.opts.events.record({
             kind: 'assistant_reasoning_delta',
             threadId,
             turnId,
@@ -711,7 +715,7 @@ export class AgentLoop {
               text: chunk.text,
               status: 'running'
             })
-          })
+          }).catch(() => {})
           break
         case 'tool_call_delta':
           break
@@ -1299,11 +1303,12 @@ export class AgentLoop {
     call: ToolCallLike,
     result: ToolHostResult
   ): Promise<void> {
-    await this.opts.turns.updateItem(threadId, `item_tool_${turnId}_${call.callId}`, {
+    const updateP = this.opts.turns.updateItem(threadId, `item_tool_${turnId}_${call.callId}`, {
       status: result.item.kind === 'tool_result' && result.item.isError ? 'failed' : 'completed',
       finishedAt: this.opts.nowIso()
     } as Partial<TurnItem>)
-    await this.opts.turns.applyItem(threadId, result.item)
+    const applyP = this.opts.turns.applyItem(threadId, result.item)
+    await Promise.all([updateP, applyP])
     await this.afterToolResultPersisted(threadId, turnId, call, result)
   }
 

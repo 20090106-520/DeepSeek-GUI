@@ -79,7 +79,7 @@ export const MAX_WATCHED_COMPLETION_NOTIFICATIONS = 200
 export const MAX_PENDING_CLAW_FEISHU_MIRRORS = 50
 const completionNotificationKeys: string[] = []
 
-const DELTA_THROTTLE_MS = 50
+const DELTA_THROTTLE_MS = 16
 let deltaThrottleTimer: ReturnType<typeof setTimeout> | null = null
 let pendingDeltas: Array<{ kind: string; text: string; seq?: number }> = []
 let pendingDeltaSet: ((s: ChatState) => Partial<ChatState>) | null = null

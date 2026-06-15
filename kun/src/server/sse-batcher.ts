@@ -11,7 +11,7 @@ export type SseBatchConfig = {
 }
 
 const DEFAULT_MAX_BATCH_SIZE = 20
-const DEFAULT_FLUSH_INTERVAL_MS = 50
+const DEFAULT_FLUSH_INTERVAL_MS = 16
 const DEFAULT_MAX_BUFFER_BYTES = 256 * 1024
 
 export class SseEventBatcher {
