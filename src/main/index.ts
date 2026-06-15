@@ -215,6 +215,7 @@ if (!runningClawScheduleMcpServer && process.platform === 'win32') {
 
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
+let splashShownAt = 0
 let setRuntimeReadyCallback: () => void = () => {}
 let store: JsonSettingsStore
 let logDir = ''
@@ -799,7 +800,7 @@ function createWindow(options: { suppressInitialShow?: boolean } = {}): void {
   })
   let mainWindowReady = false
   let runtimeReady = false
-  let splashShownAt = 0
+
 
   const tryShowWindow = (): void => {
     if (options.suppressInitialShow) return
