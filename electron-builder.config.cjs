@@ -159,7 +159,7 @@ module.exports = {
   },
   win: {
     icon: './src/asset/img/deepseek.png',
-    target: [{ target: 'nsis', arch: ['x64'] }]
+    target: [{ target: 'portable', arch: ['x64'] }, { target: 'dir', arch: ['x64'] }]
   },
   nsis: {
     oneClick: false,
