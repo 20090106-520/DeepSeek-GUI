@@ -782,8 +782,17 @@ function createWindow(options: { suppressInitialShow?: boolean } = {}): void {
     if (options.suppressInitialShow) return
     if (!mainWindow || mainWindow.isDestroyed() || mainWindow.isVisible()) return
     if (!mainWindowReady || !runtimeReady) return
-    closeSplashWindow()
-    mainWindow.show()
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.webContents.executeJavaScript(
+        'if(window.completeSplash)window.completeSplash()'
+      ).catch(() => {})
+      setTimeout(() => {
+        closeSplashWindow()
+        mainWindow?.show()
+      }, 3500)
+    } else {
+      mainWindow.show()
+    }
   }
 
   const showWindow = (): void => {
@@ -1152,11 +1161,12 @@ app.whenReady().then(async () => {
     updateSplashProgress('正在启动 AI 引擎...')
     void ensureRuntime(initial).then(() => {
       traceStartup('prewarm-kun:done')
-      updateSplashProgress('AI 引擎就绪')
+      updateSplashProgress('AI 引擎就绪，正在加载界面...')
       setRuntimeReadyCallback()
     }).catch((err) => {
       console.warn('[deepseek-gui] prewarm Kun runtime:', err)
       traceStartup('prewarm-kun:failed')
+      updateSplashProgress('启动完成')
       setRuntimeReadyCallback()
     })
   } else {
