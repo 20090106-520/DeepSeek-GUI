@@ -730,6 +730,7 @@ function createSplashWindow(): BrowserWindow {
   })
   splash.once('ready-to-show', () => {
     splash.show()
+    splashShownAt = Date.now()
   })
   return splash
 }
@@ -738,6 +739,14 @@ function updateSplashProgress(text: string): void {
   if (splashWindow && !splashWindow.isDestroyed()) {
     splashWindow.webContents.executeJavaScript(
       `if(window.updateProgressText)window.updateProgressText(${JSON.stringify(text)})`
+    ).catch(() => {})
+  }
+}
+
+function updateSplashPercent(pct: number): void {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.webContents.executeJavaScript(
+      `if(window.updateProgressPercent)window.updateProgressPercent(${pct})`
     ).catch(() => {})
   }
 }
@@ -790,21 +799,33 @@ function createWindow(options: { suppressInitialShow?: boolean } = {}): void {
   })
   let mainWindowReady = false
   let runtimeReady = false
+  let splashShownAt = 0
 
   const tryShowWindow = (): void => {
     if (options.suppressInitialShow) return
     if (!mainWindow || mainWindow.isDestroyed() || mainWindow.isVisible()) return
     if (!mainWindowReady || !runtimeReady) return
-    if (splashWindow && !splashWindow.isDestroyed()) {
-      splashWindow.webContents.executeJavaScript(
-        'if(window.completeSplash)window.completeSplash()'
-      ).catch(() => {})
-      setTimeout(() => {
-        closeSplashWindow()
-        mainWindow?.show()
-      }, 3500)
+    const minSplashMs = 4000
+    const elapsed = Date.now() - splashShownAt
+    const remaining = Math.max(0, minSplashMs - elapsed)
+    const doShow = (): void => {
+      if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.webContents.executeJavaScript(
+          'if(window.completeSplash)window.completeSplash()'
+        ).catch(() => {})
+        setTimeout(() => {
+          closeSplashWindow()
+          mainWindow?.show()
+        }, 2500)
+      } else {
+        mainWindow.show()
+      }
+    }
+    if (remaining > 0) {
+      updateSplashProgress('AI 引擎就绪，正在加载界面...')
+      setTimeout(doShow, remaining)
     } else {
-      mainWindow.show()
+      doShow()
     }
   }
 
@@ -842,8 +863,11 @@ function createWindow(options: { suppressInitialShow?: boolean } = {}): void {
   })
   setTimeout(() => {
     traceStartup('window:fallback-show-timeout')
-    showWindow()
-  }, 1500)
+    if (!mainWindowReady) {
+      mainWindowReady = true
+      if (runtimeReady) tryShowWindow()
+    }
+  }, 8000)
 }
 
 
@@ -1172,14 +1196,17 @@ app.whenReady().then(async () => {
   if (hasApiKey) {
     traceStartup('prewarm-kun:start')
     updateSplashProgress('正在启动 AI 引擎...')
+    updateSplashPercent(40)
     void ensureRuntime(initial).then(() => {
       traceStartup('prewarm-kun:done')
       updateSplashProgress('AI 引擎就绪，正在加载界面...')
+      updateSplashPercent(90)
       setRuntimeReadyCallback()
     }).catch((err) => {
       console.warn('[deepseek-gui] prewarm Kun runtime:', err)
       traceStartup('prewarm-kun:failed')
-      updateSplashProgress('启动完成')
+      updateSplashProgress('AI 引擎启动失败，即将进入界面...')
+      updateSplashPercent(90)
       setRuntimeReadyCallback()
     })
   } else {

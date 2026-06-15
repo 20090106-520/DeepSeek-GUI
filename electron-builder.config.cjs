@@ -169,12 +169,13 @@ module.exports = {
     perMachine: false,
     allowElevation: true,
     selectPerMachineByDefault: false,
-    // 明确创建快捷方式；always 在覆盖安装时也会重建（即使用户曾删掉桌面图标）
     createDesktopShortcut: 'always',
     createStartMenuShortcut: true,
     shortcutName: 'DeepSeek GUI',
     uninstallDisplayName: 'DeepSeek GUI',
-    deleteAppDataOnUninstall: false
+    deleteAppDataOnUninstall: false,
+    installerLanguages: ['zh_CN', 'en_US'],
+    language: '2052'
   },
   linux: {
     category: 'Development',

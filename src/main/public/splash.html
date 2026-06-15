@@ -171,6 +171,12 @@ window.updateProgressText = function(text) {
   var el = document.getElementById('progText');
   if (el) el.textContent = text;
 };
+window.updateProgressPercent = function(pct) {
+  var el = document.getElementById('progFill');
+  var pctEl = document.getElementById('progPct');
+  if (el) el.style.width = pct + '%';
+  if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+};
 </script>
     </div>
 
@@ -182,7 +188,7 @@ window.updateProgressText = function(text) {
     </div>
   </div>
 
-  <div class="ver" id="ver">v0.7.0</div>
+  <div class="ver" id="ver">v0.7.1</div>
 </div>
 
 <script>
@@ -640,18 +646,18 @@ window.updateProgressText = function(text) {
   tl.to('#progPct', { opacity: 1, duration: 0.3 }, 4.4);
   tl.call(function() { document.getElementById('progFill').classList.add('pulsing'); }, null, 4.4);
   tl.to('#progFill', {
-    width: '60%', duration: 2.5, ease: 'power1.inOut',
+    width: '30%', duration: 2.0, ease: 'power1.inOut',
     onUpdate: function() {
-      var p = Math.round(this.progress() * 60);
-      var labels = ['正在初始化', '加载核心模块', '配置 AI 引擎'];
-      document.getElementById('progText').textContent = labels[Math.min(Math.floor(p / 20), 2)];
+      var p = Math.round(this.progress() * 30);
+      var labels = ['正在初始化', '加载核心模块'];
+      document.getElementById('progText').textContent = labels[Math.min(Math.floor(p / 15), 1)];
       document.getElementById('progPct').textContent = p + '%';
     }
   }, 4.4);
   tl.to('#progFill', {
-    width: '65%', duration: 1.5, ease: 'sine.inOut',
+    width: '35%', duration: 1.5, ease: 'sine.inOut',
     yoyo: true, repeat: -1, repeatDelay: 0.5
-  }, 6.9);
+  }, 6.4);
 
   tl.call(function() { playCompleteSound(); }, null, 7.4);
   tl.to('#flashWarm', { opacity: 0.2, duration: 0.06 }, 7.4);
