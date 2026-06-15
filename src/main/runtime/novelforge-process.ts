@@ -1,5 +1,6 @@
-import { spawn, type ChildProcess } from 'node:child_process'
+import { spawn, execFile, type ChildProcess } from 'node:child_process'
 import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 import { app } from 'electron'
 
 type NovelForgeProcessState = 'stopped' | 'starting' | 'running' | 'error'
@@ -10,6 +11,7 @@ class NovelForgeProcessManager {
   private healthCheckInterval: ReturnType<typeof setInterval> | null = null
   private readonly port = 54321
   private readonly healthUrl = `http://127.0.0.1:${this.port}/health`
+  private lastError = ''
 
   async start(): Promise<{ success: boolean; message: string }> {
     if (this.state === 'running' || this.state === 'starting') {
@@ -22,31 +24,67 @@ class NovelForgeProcessManager {
       return { success: true, message: 'NovelForge already running' }
     }
 
-    this.state = 'starting'
+    const pythonCmd = await this.findPython()
+    if (!pythonCmd) {
+      this.state = 'error'
+      return {
+        success: false,
+        message: '未找到 Python 环境，请安装 Python 3.10+ 并确保已添加到 PATH'
+      }
+    }
 
-    const appPath = app.getAppPath()
-    const backendDir = join(appPath, 'novelforge', 'backend')
+    const backendDir = this.getBackendDir()
+    if (!backendDir) {
+      this.state = 'error'
+      return {
+        success: false,
+        message: 'NovelForge 后端文件未找到，请重新安装应用'
+      }
+    }
+
     const mainPy = join(backendDir, 'main.py')
+    if (!existsSync(mainPy)) {
+      this.state = 'error'
+      return {
+        success: false,
+        message: `NovelForge 入口文件不存在: ${mainPy}`
+      }
+    }
+
+    this.state = 'starting'
+    this.lastError = ''
 
     try {
-      this.process = spawn('python', [mainPy], {
+      this.process = spawn(pythonCmd, [mainPy], {
         cwd: backendDir,
         stdio: 'pipe',
         env: { ...process.env, PORT: String(this.port) },
         windowsHide: true
       })
 
+      let stderrOutput = ''
+      this.process.stderr?.on('data', (data: Buffer) => {
+        stderrOutput += data.toString()
+        if (stderrOutput.length > 2000) {
+          stderrOutput = stderrOutput.slice(-2000)
+        }
+      })
+
       this.process.on('error', (err) => {
+        this.lastError = err.message
         this.state = 'error'
         this.process = null
       })
 
       this.process.on('exit', (code) => {
+        if (code !== 0 && code !== null) {
+          this.lastError = stderrOutput.slice(-500) || `进程退出码: ${code}`
+        }
         this.state = code === 0 ? 'stopped' : 'error'
         this.process = null
       })
 
-      const started = await this.waitForHealth(15_000)
+      const started = await this.waitForHealth(20_000)
       if (started) {
         this.state = 'running'
         this.startHealthMonitoring()
@@ -54,11 +92,18 @@ class NovelForgeProcessManager {
       } else {
         this.state = 'error'
         this.stop()
-        return { success: false, message: 'NovelForge failed to start within timeout' }
+        const detail = this.lastError ? ` (${this.lastError.slice(0, 200)})` : ''
+        return {
+          success: false,
+          message: `NovelForge 启动超时${detail}。请检查 Python 依赖: pip install -r requirements.txt`
+        }
       }
     } catch (err) {
       this.state = 'error'
-      return { success: false, message: `Failed to start NovelForge: ${err instanceof Error ? err.message : String(err)}` }
+      return {
+        success: false,
+        message: `启动失败: ${err instanceof Error ? err.message : String(err)}`
+      }
     }
   }
 
@@ -82,6 +127,48 @@ class NovelForgeProcessManager {
 
   getPort(): number {
     return this.port
+  }
+
+  getLastError(): string {
+    return this.lastError
+  }
+
+  private getBackendDir(): string | null {
+    if (app.isPackaged) {
+      const resourcesDir = process.resourcesPath
+      const packagedPath = join(resourcesDir, 'novelforge', 'backend')
+      if (existsSync(packagedPath)) return packagedPath
+    }
+
+    const appPath = app.getAppPath()
+    const devPath = join(appPath, 'novelforge', 'backend')
+    if (existsSync(devPath)) return devPath
+
+    return null
+  }
+
+  private findPython(): Promise<string | null> {
+    return new Promise((resolve) => {
+      const candidates = process.platform === 'win32'
+        ? ['python', 'python3', 'py']
+        : ['python3', 'python']
+
+      let checked = 0
+      const total = candidates.length
+
+      for (const cmd of candidates) {
+        execFile(cmd, ['--version'], (err, stdout) => {
+          checked++
+          if (!err && stdout && /Python 3\.(1[0-9]|[2-9][0-9])/.test(stdout)) {
+            resolve(cmd)
+            return
+          }
+          if (checked === total) {
+            resolve(null)
+          }
+        })
+      }
+    })
   }
 
   private async checkHealth(): Promise<boolean> {

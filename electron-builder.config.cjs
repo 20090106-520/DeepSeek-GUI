@@ -72,6 +72,13 @@ module.exports = {
     '**/node_modules/file-uri-to-path/**/*',
     '**/out/main/splash.html'
   ],
+  extraResources: [
+    {
+      from: 'novelforge/backend',
+      to: 'novelforge/backend',
+      filter: ['**/*', '!__pycache__', '!*.pyc', '!.env']
+    }
+  ],
   npmRebuild: true,
   directories: {
     output: process.env.DEEPSEEK_GUI_DIST_DIR || 'dist'
