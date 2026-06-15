@@ -14,6 +14,23 @@ import {
   type ModelEndpointFormat
 } from '../../contracts/model-endpoint-format.js'
 
+const keepAliveAgentCache = new Map<string, unknown>()
+
+function getKeepAliveAgent(url: string): unknown {
+  const isHttps = url.startsWith('https://')
+  const key = isHttps ? 'https' : 'http'
+  const cached = keepAliveAgentCache.get(key)
+  if (cached) return cached
+  try {
+    const mod = isHttps ? require('https') : require('http')
+    const agent = new mod.Agent({ keepAlive: true, keepAliveMsecs: 30_000, maxSockets: 6 })
+    keepAliveAgentCache.set(key, agent)
+    return agent
+  } catch {
+    return undefined
+  }
+}
+
 /**
  * Configuration for the compatible HTTP model client. Chat
  * completions remains the default, while custom providers can opt into
@@ -289,12 +306,15 @@ export class DeepseekCompatModelClient implements ModelClient {
       const connectTimeoutController = new AbortController()
       const connectTimeout = setTimeout(() => connectTimeoutController.abort(), 10_000)
       const combinedSignal = combineAbortSignals(signal, connectTimeoutController.signal)
-      const response = await this.fetchImpl(url, {
+      const agent = getKeepAliveAgent(url)
+      const fetchOptions: Record<string, unknown> = {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
         signal: combinedSignal
-      })
+      }
+      if (agent) fetchOptions.agent = agent
+      const response = await this.fetchImpl(url, fetchOptions as RequestInit)
       clearTimeout(connectTimeout)
       return { kind: 'response', response }
     } catch (error) {

@@ -476,13 +476,13 @@ export class AgentLoop {
       const toolResultCount = healed.items.filter(
         (item) => item.turnId === turnId && item.kind === 'tool_result'
       ).length
-      await this.opts.events.record({
+      this.opts.events.record({
         kind: 'tool_result_upload_wait',
         threadId,
         turnId,
         status: 'waiting',
         toolResultCount
-      })
+      }).catch(() => {})
     }
     const items = repairModelHistoryItems(
       effectiveHistoryAfterLatestCompaction(healed.items)
@@ -584,14 +584,14 @@ export class AgentLoop {
       })
     }
     if (turn) {
-      await this.opts.turns.updateTurnMetadata(threadId, turnId, {
+      this.opts.turns.updateTurnMetadata(threadId, turnId, {
         activeSkillIds: skillResolution.activeSkillIds,
         skillInjectionBytes: skillResolution.injectedBytes,
         injectedMemoryIds: memories.map((memory) => memory.id),
         toolCatalogFingerprint: toolCatalog.fingerprint,
         toolCatalogToolCount: toolCatalog.toolCount,
         toolCatalogDrift: toolCatalogDrift.kind !== 'none'
-      })
+      }).catch(() => {})
     }
     if (toolCatalogDrift.kind === 'breaking') return 'stop'
     const toolKinds = new Map(toolSpecs.map((tool) => [tool.name, tool.toolKind]))
@@ -752,7 +752,7 @@ export class AgentLoop {
                 : {})
             })
           )
-          await this.opts.events.record({
+          this.opts.events.record({
             kind: 'tool_call_ready',
             threadId,
             turnId,
@@ -760,19 +760,19 @@ export class AgentLoop {
             callId: chunk.callId,
             toolName: chunk.toolName,
             readyCount: completedToolCalls.length
-          })
+          }).catch(() => {})
           break
         }
         case 'usage': {
           this.recordPromptPressure(threadId, request.model, chunk.usage.promptTokens)
           const usage = this.opts.usage.record(threadId, chunk.usage)
-          await this.opts.events.record({
+          this.opts.events.record({
             kind: 'usage',
             threadId,
             turnId,
             model: request.model,
             usage
-          })
+          }).catch(() => {})
           break
         }
         case 'completed':
@@ -1309,7 +1309,7 @@ export class AgentLoop {
     } as Partial<TurnItem>)
     const applyP = this.opts.turns.applyItem(threadId, result.item)
     await Promise.all([updateP, applyP])
-    await this.afterToolResultPersisted(threadId, turnId, call, result)
+    this.afterToolResultPersisted(threadId, turnId, call, result).catch(() => {})
   }
 
   private async afterToolResultPersisted(
@@ -1370,7 +1370,7 @@ export class AgentLoop {
       finishedAt: this.opts.nowIso()
     } as Partial<TurnItem>)
     await this.opts.turns.applyItem(input.threadId, item)
-    await this.opts.events.record({
+    this.opts.events.record({
       kind: 'tool_storm_suppressed',
       threadId: input.threadId,
       turnId: input.turnId,
@@ -1679,13 +1679,13 @@ export class AgentLoop {
       ...(estimatedCost ? { tokenEconomySavingsUsd: estimatedCost.costUsd } : {}),
       ...(estimatedCost ? { tokenEconomySavingsCny: estimatedCost.costCny } : {})
     })
-    await this.opts.events.record({
+    this.opts.events.record({
       kind: 'usage',
       threadId: input.threadId,
       turnId: input.turnId,
       model: input.model,
       usage
-    })
+    }).catch(() => {})
   }
 
   private async recordPipelineStage(
@@ -1728,7 +1728,7 @@ export class AgentLoop {
       code: 'tool_catalog_changed',
       severity: 'info'
     }))
-    await this.opts.events.record({
+    this.opts.events.record({
       kind: 'tool_catalog_changed',
       threadId: input.threadId,
       turnId: input.turnId,

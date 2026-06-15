@@ -13,6 +13,7 @@ export type SseBatchConfig = {
 const DEFAULT_MAX_BATCH_SIZE = 20
 const DEFAULT_FLUSH_INTERVAL_MS = 16
 const DEFAULT_MAX_BUFFER_BYTES = 256 * 1024
+const hasSetImmediate = typeof setImmediate === 'function'
 
 export class SseEventBatcher {
   private readonly maxBatchSize: number
@@ -20,7 +21,7 @@ export class SseEventBatcher {
   private readonly maxBufferBytes: number
   private buffer: RuntimeEvent[] = []
   private bufferBytes = 0
-  private flushTimer: ReturnType<typeof setTimeout> | null = null
+  private flushTimer: ReturnType<typeof setTimeout> | ReturnType<typeof setImmediate> | null = null
   private readonly onFlush: (encoded: string) => void
   private closed = false
 
@@ -49,10 +50,9 @@ export class SseEventBatcher {
     if (this.buffer.length >= this.maxBatchSize) {
       this.flush()
     } else if (!this.flushTimer) {
-      this.flushTimer = setTimeout(() => {
-        this.flushTimer = null
-        this.flush()
-      }, this.flushIntervalMs)
+      this.flushTimer = hasSetImmediate
+        ? setImmediate(() => { this.flushTimer = null; this.flush() })
+        : setTimeout(() => { this.flushTimer = null; this.flush() }, this.flushIntervalMs)
     }
 
     return true
@@ -62,7 +62,8 @@ export class SseEventBatcher {
     if (this.closed || this.buffer.length === 0) return
 
     if (this.flushTimer) {
-      clearTimeout(this.flushTimer)
+      if (hasSetImmediate) clearImmediate(this.flushTimer as ReturnType<typeof setImmediate>)
+      else clearTimeout(this.flushTimer as ReturnType<typeof setTimeout>)
       this.flushTimer = null
     }
 
@@ -82,7 +83,8 @@ export class SseEventBatcher {
     if (this.closed) return
     this.closed = true
     if (this.flushTimer) {
-      clearTimeout(this.flushTimer)
+      if (hasSetImmediate) clearImmediate(this.flushTimer as ReturnType<typeof setImmediate>)
+      else clearTimeout(this.flushTimer as ReturnType<typeof setTimeout>)
       this.flushTimer = null
     }
     if (this.buffer.length > 0) {

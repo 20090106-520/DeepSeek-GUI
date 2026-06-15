@@ -623,10 +623,17 @@ export function buildThreadEventSink(
         pendingDeltas.push({ kind: delta.kind, text: delta.text, seq: delta.seq })
       }
       if (!deltaThrottleTimer) {
-        const schedule = typeof requestAnimationFrame === 'function'
-          ? () => { deltaThrottleTimer = requestAnimationFrame(() => { deltaThrottleTimer = null; flushPendingDeltas(set, get, isCurrentStream) }) }
-          : () => { deltaThrottleTimer = setTimeout(() => { deltaThrottleTimer = null; flushPendingDeltas(set, get, isCurrentStream) }, DELTA_THROTTLE_MS) }
-        schedule()
+        if (typeof requestAnimationFrame === 'function') {
+          deltaThrottleTimer = requestAnimationFrame(() => {
+            deltaThrottleTimer = null
+            flushPendingDeltas(set, get, isCurrentStream)
+          })
+        } else {
+          deltaThrottleTimer = setTimeout(() => {
+            deltaThrottleTimer = null
+            flushPendingDeltas(set, get, isCurrentStream)
+          }, DELTA_THROTTLE_MS)
+        }
       }
     },
     onTool: (ev) => {
@@ -1082,27 +1089,18 @@ function flushPendingDeltas(
   if (deltas.length === 0 || !isCurrentStream()) return
 
   set((s) => {
-    const nextError = clearRuntimeStreamRecoveringError(s.error)
-    const seqs = deltas
-      .map((d) => d.seq)
-      .filter((v): v is number => typeof v === 'number')
-    const nextLastSeq = seqs.length > 0 ? Math.max(s.lastSeq, ...seqs) : s.lastSeq
-    const base: Partial<ChatState> = {
-      error: nextError,
-      ...(nextLastSeq !== s.lastSeq ? { lastSeq: nextLastSeq } : {})
-    }
-    if (!s.busy) {
-      base.busy = true
-      armBusyWatchdog(set, get)
-    }
-    const reasoningParts: string[] = []
-    const assistantParts: string[] = []
+    let liveReasoning = s.liveReasoning
+    let liveAssistant = s.liveAssistant
     let nextReasoningFirstAtByUserId = s.turnReasoningFirstAtByUserId
     let nextReasoningLastAtByUserId = s.turnReasoningLastAtByUserId
     const userId = s.currentTurnUserId
+    let hasReasoningChange = false
+    let hasAssistantChange = false
+
     for (const delta of deltas) {
       if (delta.kind === 'agent_reasoning') {
-        reasoningParts.push(delta.text)
+        liveReasoning += delta.text
+        hasReasoningChange = true
         if (userId) {
           const now = Date.now()
           if (typeof nextReasoningFirstAtByUserId[userId] !== 'number') {
@@ -1117,21 +1115,32 @@ function flushPendingDeltas(
               : { ...nextReasoningLastAtByUserId, [userId]: now }
         }
       } else {
-        assistantParts.push(delta.text)
+        liveAssistant += delta.text
+        hasAssistantChange = true
       }
     }
-    const liveReasoning = reasoningParts.length > 0 ? s.liveReasoning + reasoningParts.join('') : s.liveReasoning
-    const liveAssistant = assistantParts.length > 0 ? s.liveAssistant + assistantParts.join('') : s.liveAssistant
-    return {
-      ...base,
-      ...(liveReasoning !== s.liveReasoning ? { liveReasoning } : {}),
-      ...(liveAssistant !== s.liveAssistant ? { liveAssistant } : {}),
-      ...(nextReasoningFirstAtByUserId !== s.turnReasoningFirstAtByUserId
-        ? { turnReasoningFirstAtByUserId: nextReasoningFirstAtByUserId }
-        : {}),
-      ...(nextReasoningLastAtByUserId !== s.turnReasoningLastAtByUserId
-        ? { turnReasoningLastAtByUserId: nextReasoningLastAtByUserId }
-        : {})
+
+    const nextError = clearRuntimeStreamRecoveringError(s.error)
+    const seqs = deltas
+      .map((d) => d.seq)
+      .filter((v): v is number => typeof v === 'number')
+    const nextLastSeq = seqs.length > 0 ? Math.max(s.lastSeq, ...seqs) : s.lastSeq
+
+    const patch: Partial<ChatState> = {}
+    if (nextError !== s.error) patch.error = nextError
+    if (nextLastSeq !== s.lastSeq) patch.lastSeq = nextLastSeq
+    if (!s.busy) {
+      patch.busy = true
+      armBusyWatchdog(set, get)
     }
+    if (hasReasoningChange) patch.liveReasoning = liveReasoning
+    if (hasAssistantChange) patch.liveAssistant = liveAssistant
+    if (nextReasoningFirstAtByUserId !== s.turnReasoningFirstAtByUserId) {
+      patch.turnReasoningFirstAtByUserId = nextReasoningFirstAtByUserId
+    }
+    if (nextReasoningLastAtByUserId !== s.turnReasoningLastAtByUserId) {
+      patch.turnReasoningLastAtByUserId = nextReasoningLastAtByUserId
+    }
+    return patch
   })
 }
