@@ -154,7 +154,20 @@ function isProviderValid(settings: AppSettingsV1): boolean {
   const providerId = settings.agents?.kun?.providerId ?? ''
   if (providerId === 'free') return true
   if (providerId === 'deepseek') return true
-  return providers.some((p: any) => p.id === providerId)
+  if (providers.some((p: any) => p.id === providerId)) return true
+  return false
+}
+
+function isProviderConfigured(settings: AppSettingsV1): boolean {
+  const providerSettings = settings.provider ?? {}
+  const providers = Array.isArray(providerSettings.providers) ? providerSettings.providers : []
+  const providerId = settings.agents?.kun?.providerId ?? ''
+  const provider = providers.find((p: any) => p.id === providerId)
+  if (!provider) return false
+  const apiKey = (provider.apiKey ?? '').trim()
+  if (!apiKey) return false
+  if (providerId !== 'free' && apiKey === 'sk-free-no-key-required') return false
+  return true
 }
 
 function runtimeJsonError(code: string, message: string): Error {
@@ -649,7 +662,7 @@ async function ensureKunRuntime(settings: AppSettingsV1): Promise<void> {
     throw runtimeJsonError(threadApi.error, threadApi.message)
   }
 
-  if (!hasApiKey || !isProviderValid(settings)) {
+  if (!hasApiKey || !isProviderValid(settings) || !isProviderConfigured(settings)) {
     const freeFallback = tryFallbackToFreeProvider(settings)
     if (freeFallback) {
       settings = freeFallback

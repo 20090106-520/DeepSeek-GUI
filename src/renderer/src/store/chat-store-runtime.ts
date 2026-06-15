@@ -194,10 +194,24 @@ function isInterruptSettledError(error: unknown, message: string): boolean {
   if (code === 'aborted') return true
   if (isUserInputInterruptError(message)) return true
   const lowered = message.toLowerCase()
-  return lowered.includes('interrupted') ||
+  if (lowered.includes('interrupted') ||
     lowered.includes('aborted') ||
     lowered.includes('cancelled') ||
-    lowered.includes('canceled')
+    lowered.includes('canceled')) return true
+  return false
+}
+
+function isUnrecoverableRuntimeError(error: unknown, message: string): boolean {
+  const code = getRuntimeErrorCode(error)
+  const lowered = message.toLowerCase()
+  if (lowered.includes('kun turn failed') ||
+    lowered.includes('[kun turn failed]')) return true
+  if (code === 'missing_api_key' ||
+    code === 'runtime_offline' ||
+    code === 'runtime_unhealthy' ||
+    code === 'runtime_port_conflict' ||
+    code === 'runtime_auth_required') return true
+  return false
 }
 
 export async function readActiveWriteWorkspace(fallbackWorkspaceRoot: string): Promise<string> {
@@ -886,6 +900,15 @@ export function buildThreadEventSink(
         const flushed = flushLiveBlocks(s)
         const baseBlocks = flushed.blocks ?? s.blocks
         const view = describeRuntimeError(runtimeErrorPayloadToError(ev))
+        const existingErrorCount = baseBlocks.filter(
+          (b) => b.kind === 'system' && b.text === view.summary && b.severity === 'error'
+        ).length
+        if (existingErrorCount >= 2) {
+          return {
+            ...flushed,
+            error: clearRuntimeStreamRecoveringError(s.error)
+          }
+        }
         const block: Extract<ChatBlock, { kind: 'system' }> = {
           kind: 'system',
           id: ev.itemId,
@@ -1023,19 +1046,16 @@ export function buildThreadEventSink(
       const message = formatRuntimeError(err)
       const detail = runtimeErrorDetail(err)
       const interrupted = isInterruptSettledError(err, message)
+      const unrecoverable = isUnrecoverableRuntimeError(err, message)
+      const shouldStopBusy = !state.busy || interrupted || unrecoverable
       takePendingClawFeishuMirror(state.currentTurnId)
       set((s) => {
-        const wasBusy = s.busy
         const out = flushLiveBlocks(s, {
           ...finalizeTurnTiming(s),
           error: interrupted ? null : message,
           runtimeErrorDetail: interrupted ? null : detail || null
         })
-        // Keep the busy flag if the turn was active — the interrupt button
-        // should stay visible so the user can interrupt a stuck turn. The
-        // watchdog (re-armed below) will eventually time out if the turn
-        // never recovers.
-        if (!wasBusy || interrupted) {
+        if (shouldStopBusy) {
           out.busy = false
           out.currentTurnId = null
           out.currentTurnUserId = null
@@ -1043,8 +1063,6 @@ export function buildThreadEventSink(
         }
         return out
       })
-      // Re-arm the watchdog so a stuck SSE stream doesn't leave the UI
-      // permanently in the busy state.
       if (get().busy) armBusyWatchdog(set, get)
     },
     onUsage: () => {
