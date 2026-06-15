@@ -141,7 +141,6 @@ module.exports = {
   mac: {
     category: 'public.app-category.developer-tools',
     identity: hasExplicitMacSigningIdentity ? undefined : null,
-    // We notarize in scripts/mac-notarize.cjs so APPLE_API_KEY_BASE64 can be supported.
     notarize: false,
     hardenedRuntime: hasExplicitMacSigningIdentity,
     forceCodeSigning: hasExplicitMacSigningIdentity,
@@ -150,7 +149,6 @@ module.exports = {
     entitlements: 'build/entitlements.mac.plist',
     entitlementsInherit: 'build/entitlements.mac.inherit.plist',
     icon: './src/asset/img/deepseek.png',
-    // arm64 (Apple Silicon) + x64 (Intel). On M 系列 Mac 本地打包会各出一组 dmg/zip。
     target: [
       { target: 'dmg', arch: ['arm64', 'x64'] },
       { target: 'zip', arch: ['arm64', 'x64'] }
