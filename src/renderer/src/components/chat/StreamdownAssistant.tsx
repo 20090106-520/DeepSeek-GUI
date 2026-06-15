@@ -1,4 +1,5 @@
 import type { ComponentPropsWithRef, MouseEvent, ReactElement } from 'react'
+import { memo } from 'react'
 import { Streamdown, type AnimateOptions, type StreamdownProps } from 'streamdown'
 import remarkGfm from 'remark-gfm'
 import { harden } from 'rehype-harden'
@@ -150,7 +151,7 @@ type Props = {
   className?: string
 }
 
-export function StreamdownAssistant({ text, streaming, className }: Props): ReactElement {
+function StreamdownAssistantComponent({ text, streaming, className }: Props): ReactElement {
   const animated = streaming ? shouldAnimateStreamingText(text) : false
   const isAnimating = animated !== false
 
@@ -169,3 +170,5 @@ export function StreamdownAssistant({ text, streaming, className }: Props): Reac
     </Streamdown>
   )
 }
+
+export const StreamdownAssistant = memo(StreamdownAssistantComponent)

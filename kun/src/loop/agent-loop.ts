@@ -249,6 +249,10 @@ export type AgentLoopOptions = {
   toolArgumentRepair?: {
     maxStringBytes?: number
   }
+  toolRetryConfig?: {
+    defaultRetries?: number
+    [toolName: string]: { retries?: number } | number | undefined
+  }
   /**
    * Optional fallback GUI plan context for embedders that run the loop
    * without persisted turn metadata. Normal serve mode reads GUI plan
@@ -1094,49 +1098,125 @@ export class AgentLoop {
         callId: input.call.callId
       },
       async () => {
-        try {
-          return await this.opts.toolHost.execute(input.call, input.context, async (item) => {
-            const existing = await this.opts.turns.updateItem(input.threadId, item.id, {
-              output: item.kind === 'tool_result' ? item.output : undefined,
-              isError: item.kind === 'tool_result' ? item.isError : undefined,
-              status: 'running'
-            } as Partial<TurnItem>)
-            if (existing) return
-            await this.opts.turns.applyItem(input.threadId, item)
-          })
-        } catch (error) {
-          if (input.context.abortSignal.aborted || !this.isRecoverableToolDispatchError(error)) {
-            throw error
+        const maxRetries = this.getRetryCount(input.call.toolName)
+        let lastError: unknown
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            return await this.opts.toolHost.execute(input.call, input.context, async (item) => {
+              const existing = await this.opts.turns.updateItem(input.threadId, item.id, {
+                output: item.kind === 'tool_result' ? item.output : undefined,
+                isError: item.kind === 'tool_result' ? item.isError : undefined,
+                status: 'running'
+              } as Partial<TurnItem>)
+              if (existing) return
+              await this.opts.turns.applyItem(input.threadId, item)
+            })
+          } catch (error) {
+            lastError = error
+            
+            if (input.context.abortSignal.aborted || !this.isRecoverableToolDispatchError(error)) {
+              throw error
+            }
+            
+            if (!this.canRetryToolCall(error)) {
+              break
+            }
+            
+            if (attempt < maxRetries) {
+              const delay = this.getRetryDelay(attempt)
+              await this.opts.events.record({
+                kind: 'error',
+                threadId: input.threadId,
+                turnId: input.turnId,
+                message: `Tool call ${input.call.toolName} attempt ${attempt} failed, retrying in ${delay}ms`,
+                code: 'tool_retry',
+                severity: 'info',
+                details: {
+                  toolName: input.call.toolName,
+                  callId: input.call.callId,
+                  attempt,
+                  maxRetries
+                }
+              })
+              await this.sleep(delay)
+              continue
+            }
           }
-          const message = error instanceof Error ? error.message : String(error)
-          await this.opts.events.record({
-            kind: 'error',
-            threadId: input.threadId,
+        }
+        
+        const classified = this.classifyToolError(lastError)
+        await this.opts.events.record({
+          kind: 'error',
+          threadId: input.threadId,
+          turnId: input.turnId,
+          message: `Tool call ${input.call.toolName} was rejected: ${classified.message}`,
+          code: classified.code,
+          severity: 'warning',
+          details: {
+            toolName: input.call.toolName,
+            callId: input.call.callId,
+            guidance: classified.guidance
+          }
+        })
+        return {
+          item: makeToolResultItem({
+            id: `item_${input.call.callId}`,
             turnId: input.turnId,
-            message: `Tool call ${input.call.toolName} was rejected: ${message}`,
-            code: 'tool_dispatch_rejected',
-            severity: 'warning'
-          })
-          return {
-            item: makeToolResultItem({
-              id: `item_${input.call.callId}`,
-              turnId: input.turnId,
-              threadId: input.threadId,
-              callId: input.call.callId,
-              toolName: input.call.toolName,
-              toolKind: input.call.toolKind ?? 'tool_call',
-              output: {
-                code: 'tool_dispatch_rejected',
-                error: message,
-                guidance: 'Use only tools advertised in the current turn context.'
-              },
-              isError: true
-            }),
-            approved: false
-          }
+            threadId: input.threadId,
+            callId: input.call.callId,
+            toolName: input.call.toolName,
+            toolKind: input.call.toolKind ?? 'tool_call',
+            output: {
+              code: classified.code,
+              error: classified.message,
+              guidance: classified.guidance,
+              toolName: input.call.toolName
+            },
+            isError: true
+          }),
+          approved: false
         }
       }
     )
+  }
+
+  private getRetryCount(toolName: string): number {
+    const retryConfig = this.opts.toolRetryConfig?.[toolName]
+    if (retryConfig !== undefined) {
+      if (typeof retryConfig === 'number') {
+        return retryConfig
+      }
+      if (retryConfig.retries !== undefined) {
+        return retryConfig.retries
+      }
+    }
+    
+    if (PARALLEL_READ_ONLY_TOOL_NAMES.has(toolName)) {
+      return 2
+    }
+    
+    return this.opts.toolRetryConfig?.defaultRetries ?? 1
+  }
+
+  private getRetryDelay(attempt: number): number {
+    const baseDelay = 1000
+    return baseDelay * Math.pow(2, attempt - 1)
+  }
+
+  private canRetryToolCall(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error)
+    return (
+      message.includes('timeout') ||
+      message.includes('network') ||
+      message.includes('connection') ||
+      message.includes('service unavailable') ||
+      message.includes('rate limit')
+    )
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
   }
 
   private isRecoverableToolDispatchError(error: unknown): boolean {
@@ -1145,8 +1225,72 @@ export class AgentLoop {
       message.startsWith('unknown tool:') ||
       message.includes(' is not provided by ') ||
       message.includes(' is not advertised') ||
-      message.includes(' is disabled by policy')
+      message.includes(' is disabled by policy') ||
+      message.includes('hook_failed') ||
+      message.includes('read_before_edit_required') ||
+      message.includes('approval_policy_blocked')
     )
+  }
+
+  private classifyToolError(error: unknown): { code: string; message: string; guidance: string } {
+    const message = error instanceof Error ? error.message : String(error)
+    
+    if (message.startsWith('unknown tool:')) {
+      return {
+        code: 'tool_not_found',
+        message: message,
+        guidance: 'The tool is not registered in the tool catalog. Check if the tool is properly installed or enabled.'
+      }
+    }
+    
+    if (message.includes(' is not provided by ')) {
+      const match = message.match(/tool (\w+) is not provided by (\w+)/)
+      return {
+        code: 'provider_mismatch',
+        message: message,
+        guidance: match 
+          ? `Tool '${match[1]}' is not provided by '${match[2]}'. Check the provider configuration.`
+          : 'The tool provider does not match the expected provider.'
+      }
+    }
+    
+    if (message.includes(' is not advertised')) {
+      return {
+        code: 'tool_not_advertised',
+        message: message,
+        guidance: 'The tool is not available in the current context. Check tool policies and skill configurations.'
+      }
+    }
+    
+    if (message.includes(' is disabled by policy')) {
+      return {
+        code: 'policy_blocked',
+        message: message,
+        guidance: 'The tool has been disabled by policy. Contact your administrator to enable it.'
+      }
+    }
+    
+    if (message.includes('hook_failed')) {
+      return {
+        code: 'hook_failed',
+        message: message,
+        guidance: 'A tool hook failed to execute. Check hook configuration and logs.'
+      }
+    }
+    
+    if (message.includes('read_before_edit_required')) {
+      return {
+        code: 'read_before_edit',
+        message: message,
+        guidance: 'Read the file before making changes to ensure you have the latest content.'
+      }
+    }
+    
+    return {
+      code: 'tool_execution_error',
+      message: message,
+      guidance: 'An unexpected error occurred during tool execution. Check the logs for more details.'
+    }
   }
 
   private async persistToolCallResult(

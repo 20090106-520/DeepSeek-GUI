@@ -194,7 +194,7 @@ export function isKunChildRunning(): boolean {
   return child !== null && child.exitCode === null && child.signalCode === null
 }
 
-export async function startKunChild(settings: AppSettingsV1): Promise<void> {
+export async function startKunChild(settings: AppSettingsV1, overrideRoot?: string): Promise<void> {
   const runtime = resolveKunRuntimeSettings(settings)
   if (isKunChildRunning()) return
   if (!runtime.autoStart) return
@@ -202,7 +202,7 @@ export async function startKunChild(settings: AppSettingsV1): Promise<void> {
     await childLogCapture.close()
     childLogCapture = null
   }
-  const root = appRoot()
+  const root = overrideRoot ?? appRoot()
   const resolution = resolveKunExecutable(root, runtime.binaryPath)
   if (resolution.command === process.execPath && !existsSync(resolution.args[0])) {
     throw new Error(

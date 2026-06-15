@@ -1,5 +1,5 @@
 import type { ReactElement, RefObject } from 'react'
-import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, memo, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ChatBlock, RuntimeConnectionStatus } from '../../agent/types'
 import { useChatStore } from '../../store/chat-store'
@@ -21,7 +21,6 @@ import {
 } from './message-timeline-turns'
 import { extractPlanMetadataFromBlock } from '../../plan/plan-tool'
 import { planDisplayNameFromRelativePath } from '../../plan/plan-path'
-import { useVirtualScroll } from '../../hooks/use-virtual-scroll'
 
 export { summarizeToolBlock } from './message-timeline-process'
 
@@ -46,8 +45,7 @@ type Props = {
 
 const TURN_PAGE_SIZE = 18
 const AUTO_COLLAPSE_THRESHOLD = 24
-const VIRTUAL_SCROLL_TURN_THRESHOLD = 50
-const ESTIMATED_TURN_HEIGHT = 160
+
 
 function blockScrollStamp(block: ChatBlock | undefined): string {
   if (!block) return ''
@@ -139,22 +137,6 @@ export function MessageTimeline({
     [hiddenTurnCount, turns]
   )
 
-  const enableVirtualScroll = visibleTurns.length > VIRTUAL_SCROLL_TURN_THRESHOLD && !busy
-
-  const virtualScroll = useVirtualScroll({
-    itemHeight: ESTIMATED_TURN_HEIGHT,
-    overscan: 5,
-    containerHeight: typeof window !== 'undefined' ? window.innerHeight : 800,
-    totalItems: enableVirtualScroll ? visibleTurns.length : 0
-  })
-
-  const virtualVisibleTurns = useMemo(() => {
-    if (!enableVirtualScroll) return visibleTurns
-    return visibleTurns.slice(
-      Math.max(0, virtualScroll.visibleStartIndex),
-      Math.min(visibleTurns.length, virtualScroll.visibleEndIndex + 1)
-    )
-  }, [enableVirtualScroll, visibleTurns, virtualScroll.visibleStartIndex, virtualScroll.visibleEndIndex])
   const forkedFromTitle = activeThread?.forkedFromTitle?.trim() ?? ''
   const forkBoundaryTurnCount =
     typeof activeThread?.forkedFromTurnCount === 'number'
@@ -203,103 +185,47 @@ export function MessageTimeline({
           </div>
         ) : null}
 
-        {enableVirtualScroll ? (
-          <div
-            ref={virtualScroll.containerRef}
-            onScroll={virtualScroll.onScroll}
-            style={{ maxHeight: '100%', overflowY: 'auto' }}
-          >
-            <div style={{ height: virtualScroll.totalHeight, position: 'relative' }}>
-              {virtualScroll.visibleItems.map(({ index, offsetTop }) => {
-                const turn = visibleTurns[index]
-                if (!turn) return null
-                const absoluteTurnIndex = hiddenTurnCount + index
-                const userId = turn.user?.id
-                const isLive = !!(userId && currentTurnUserId === userId)
-                const startedAt = userId ? turnStartedAtByUserId[userId] : undefined
-                const recordedDuration = userId ? turnDurationByUserId[userId] : undefined
-                const durationMs =
-                  recordedDuration ??
-                  (isLive && typeof startedAt === 'number'
-                    ? Math.max(0, tickNow - startedAt)
-                    : undefined)
-                const reasoningFirst = userId ? turnReasoningFirstAtByUserId[userId] : undefined
-                const reasoningLast = userId ? turnReasoningLastAtByUserId[userId] : undefined
-                const reasoningDurationMs =
-                  typeof reasoningFirst === 'number' && typeof reasoningLast === 'number'
-                    ? Math.max(0, reasoningLast - reasoningFirst)
-                    : undefined
-                const turnPending = turnHasPendingRuntimeWork(turn)
-                const isLatestTurn = index === visibleTurns.length - 1
-                const hasLiveStream = isLatestTurn && !!(liveReasoning.trim() || live.trim())
-                const showForkPoint =
-                  forkBoundaryTurnCount !== undefined && absoluteTurnIndex === forkBoundaryTurnCount
-                return (
-                  <Fragment key={stableTurnKey(turn, absoluteTurnIndex)}>
-                    {showForkPoint ? <ThreadForkPoint parentTitle={forkedFromTitle} /> : null}
-                    <div style={{ position: 'absolute', top: offsetTop, left: 0, right: 0 }}>
-                      <MemoMessageTurn
-                        turn={turn}
-                        isProcessing={(busy && isLatestTurn) || turnPending || hasLiveStream}
-                        liveReasoning={isLatestTurn ? liveReasoning : ''}
-                        live={isLatestTurn ? live : ''}
-                        durationMs={durationMs}
-                        reasoningDurationMs={reasoningDurationMs}
-                        devPreviewCard={isLatestTurn ? devPreviewCard : null}
-                        planActionsBusy={planActionsBusy}
-                        onBuildPlan={onBuildPlan}
-                        onOpenPlan={onOpenPlan}
-                        viewportRef={containerRef}
-                      />
-                    </div>
-                  </Fragment>
-                )
-              })}
-            </div>
-          </div>
-        ) : (
-          visibleTurns.map((turn, index) => {
-            const absoluteTurnIndex = hiddenTurnCount + index
-            const userId = turn.user?.id
-            const isLive = !!(userId && currentTurnUserId === userId)
-            const startedAt = userId ? turnStartedAtByUserId[userId] : undefined
-            const recordedDuration = userId ? turnDurationByUserId[userId] : undefined
-            const durationMs =
-              recordedDuration ??
-              (isLive && typeof startedAt === 'number'
-                ? Math.max(0, tickNow - startedAt)
-                : undefined)
-            const reasoningFirst = userId ? turnReasoningFirstAtByUserId[userId] : undefined
-            const reasoningLast = userId ? turnReasoningLastAtByUserId[userId] : undefined
-            const reasoningDurationMs =
-              typeof reasoningFirst === 'number' && typeof reasoningLast === 'number'
-                ? Math.max(0, reasoningLast - reasoningFirst)
-                : undefined
-            const turnPending = turnHasPendingRuntimeWork(turn)
-            const isLatestTurn = index === visibleTurns.length - 1
-            const hasLiveStream = isLatestTurn && !!(liveReasoning.trim() || live.trim())
-            const showForkPoint =
-              forkBoundaryTurnCount !== undefined && absoluteTurnIndex === forkBoundaryTurnCount
-            return (
-              <Fragment key={stableTurnKey(turn, absoluteTurnIndex)}>
-                {showForkPoint ? <ThreadForkPoint parentTitle={forkedFromTitle} /> : null}
-                <MemoMessageTurn
-                  turn={turn}
-                  isProcessing={(busy && isLatestTurn) || turnPending || hasLiveStream}
-                  liveReasoning={isLatestTurn ? liveReasoning : ''}
-                  live={isLatestTurn ? live : ''}
-                  durationMs={durationMs}
-                  reasoningDurationMs={reasoningDurationMs}
-                  devPreviewCard={isLatestTurn ? devPreviewCard : null}
-                  planActionsBusy={planActionsBusy}
-                  onBuildPlan={onBuildPlan}
-                  onOpenPlan={onOpenPlan}
-                  viewportRef={containerRef}
-                />
-              </Fragment>
-            )
-          })
-        )}
+        {visibleTurns.map((turn, index) => {
+          const absoluteTurnIndex = hiddenTurnCount + index
+          const userId = turn.user?.id
+          const isLive = !!(userId && currentTurnUserId === userId)
+          const startedAt = userId ? turnStartedAtByUserId[userId] : undefined
+          const recordedDuration = userId ? turnDurationByUserId[userId] : undefined
+          const durationMs =
+            recordedDuration ??
+            (isLive && typeof startedAt === 'number'
+              ? Math.max(0, tickNow - startedAt)
+              : undefined)
+          const reasoningFirst = userId ? turnReasoningFirstAtByUserId[userId] : undefined
+          const reasoningLast = userId ? turnReasoningLastAtByUserId[userId] : undefined
+          const reasoningDurationMs =
+            typeof reasoningFirst === 'number' && typeof reasoningLast === 'number'
+              ? Math.max(0, reasoningLast - reasoningFirst)
+              : undefined
+          const turnPending = turnHasPendingRuntimeWork(turn)
+          const isLatestTurn = index === visibleTurns.length - 1
+          const hasLiveStream = isLatestTurn && !!(liveReasoning.trim() || live.trim())
+          const showForkPoint =
+            forkBoundaryTurnCount !== undefined && absoluteTurnIndex === forkBoundaryTurnCount
+          return (
+            <Fragment key={stableTurnKey(turn, absoluteTurnIndex)}>
+              {showForkPoint ? <ThreadForkPoint parentTitle={forkedFromTitle} /> : null}
+              <MemoMessageTurn
+                turn={turn}
+                isProcessing={(busy && isLatestTurn) || turnPending || hasLiveStream}
+                liveReasoning={isLatestTurn ? liveReasoning : ''}
+                live={isLatestTurn ? live : ''}
+                durationMs={durationMs}
+                reasoningDurationMs={reasoningDurationMs}
+                devPreviewCard={isLatestTurn ? devPreviewCard : null}
+                planActionsBusy={planActionsBusy}
+                onBuildPlan={onBuildPlan}
+                onOpenPlan={onOpenPlan}
+                viewportRef={containerRef}
+              />
+            </Fragment>
+          )
+        })}
 
         {forkBoundaryTurnCount !== undefined &&
         forkBoundaryTurnCount === turns.length &&

@@ -272,7 +272,30 @@ export function getFriendlyErrorKey(category: ErrorCategory): string {
 }
 
 export function maskApiKey(text: string): string {
-  return text.replace(/(sk-|api[_-]?key[=:]\s*)[a-zA-Z0-9_-]{8,}/gi, '$1****')
+  let result = text
+  
+  const patterns = [
+    /(sk-)[a-zA-Z0-9_-]{8,}/gi,
+    /(pk-)[a-zA-Z0-9_-]{8,}/gi,
+    /(api[_-]?key[=:]\s*)[a-zA-Z0-9_-]{8,}/gi,
+    /(token[=:]\s*)[a-zA-Z0-9_-]{8,}/gi,
+    /(access[_-]?token[=:]\s*)[a-zA-Z0-9_-]{8,}/gi,
+    /(secret[_-]?key[=:]\s*)[a-zA-Z0-9_-]{8,}/gi,
+    /(authorization:\s*bearer\s+)[a-zA-Z0-9._-]{10,}/gi,
+    /(x-api-key[=:]\s*)[a-zA-Z0-9_-]{8,}/gi,
+    /(ghp_)[a-zA-Z0-9]{8,}/gi,
+    /(gho_)[a-zA-Z0-9]{8,}/gi,
+    /(github_pat_)[a-zA-Z0-9_]{15,}/gi,
+    /(slack_signing_secret=)[a-zA-Z0-9]{20,}/gi,
+    /(client[_-]?secret[=:]\s*)[a-zA-Z0-9_-]{10,}/gi,
+    /(refresh[_-]?token[=:]\s*)[a-zA-Z0-9._-]{10,}/gi
+  ]
+
+  for (const pattern of patterns) {
+    result = result.replace(pattern, '$1****')
+  }
+
+  return result
 }
 
 export function getErrorReportBody(error: Error | null, errorContext: ErrorContext | null): string {

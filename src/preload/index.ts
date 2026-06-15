@@ -164,6 +164,8 @@ const api = {
   },
   logError: (category, message, detail) =>
     ipcRenderer.invoke('log:error', { category, message, detail }),
+  getLogs: () => ipcRenderer.invoke('log:get'),
+  clearLogs: () => ipcRenderer.invoke('log:clear'),
   getLogPath: () => ipcRenderer.invoke('log:get-path'),
   openLogDir: () => ipcRenderer.invoke('log:open-dir'),
   getPathForFile: (file: File) => webUtils.getPathForFile(file),

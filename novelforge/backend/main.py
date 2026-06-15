@@ -83,6 +83,11 @@ def read_root():
         "version": settings.app.app_version
     }
 
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
 if __name__ == "__main__":
     import uvicorn
     # 添加reload=True，这样当代码修改时会自动重新加载

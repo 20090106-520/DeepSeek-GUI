@@ -206,6 +206,8 @@ export type ChatExportResult =
 
 export type DsGuiApi = {
   platform: string
+  getLogs: () => Promise<string>
+  clearLogs: () => Promise<void>
   getSettings: () => Promise<AppSettingsV1>
   setSettings: (partial: AppSettingsPatch) => Promise<AppSettingsV1>
   runtimeRequest: (path: string, method?: string, body?: string) => Promise<RuntimeRequestResult>

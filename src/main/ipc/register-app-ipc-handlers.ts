@@ -2,7 +2,7 @@ import { app, dialog, ipcMain, shell, type BrowserWindow, type WebContents } fro
 import { watch, type FSWatcher } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { dirname, join } from 'node:path'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile, readdir, unlink } from 'node:fs/promises'
 import { z } from 'zod'
 import {
   type AppSettingsPatch,
@@ -1084,5 +1084,68 @@ export function registerAppIpcHandlers(options: RegisterAppIpcHandlersOptions): 
     const manager = getNovelForgeManager()
     manager.stop()
     return { success: true }
+  })
+
+  ipcMain.handle('log:get', async () => {
+    const logDir = resolveLogDirectory()
+    try {
+      const entries = await readdir(logDir)
+      const logFiles = entries.filter((entry) => entry.endsWith('.log'))
+      const allLogs: Array<{ timestamp: string; level: string; category: string; message: string }> = []
+
+      for (const file of logFiles) {
+        const content = await readFile(join(logDir, file), 'utf8')
+        const lines = content.split('\n').filter((line) => line.trim())
+
+        for (const line of lines) {
+          const match = line.match(/\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)\]\s*\[(\w+)\]\s*\[(\w+)\]\s*(.+)/)
+          if (match) {
+            allLogs.push({
+              timestamp: match[1],
+              level: match[2].toLowerCase() as 'error' | 'warn' | 'info' | 'stdout' | 'stderr',
+              category: match[3],
+              message: match[4]
+            })
+          } else {
+            const kunMatch = line.match(/\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)\]\s*\[(\w+)\]\s*\[kun.*?\]\s*(.+)/)
+            if (kunMatch) {
+              allLogs.push({
+                timestamp: kunMatch[1],
+                level: kunMatch[2].toLowerCase() === 'stdout' ? 'stdout' : 'stderr',
+                category: 'kun',
+                message: kunMatch[3]
+              })
+            }
+          }
+        }
+      }
+
+      allLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      return JSON.stringify(allLogs)
+    } catch (error) {
+      logError('log-viewer', 'Failed to read logs', {
+        message: error instanceof Error ? error.message : String(error)
+      })
+      return JSON.stringify([])
+    }
+  })
+
+  ipcMain.handle('log:clear', async () => {
+    const logDir = resolveLogDirectory()
+    try {
+      const entries = await readdir(logDir)
+      const logFiles = entries.filter((entry) => entry.endsWith('.log'))
+
+      for (const file of logFiles) {
+        await unlink(join(logDir, file))
+      }
+
+      return { ok: true }
+    } catch (error) {
+      logError('log-viewer', 'Failed to clear logs', {
+        message: error instanceof Error ? error.message : String(error)
+      })
+      return { ok: false, message: error instanceof Error ? error.message : 'Unknown error' }
+    }
   })
 }

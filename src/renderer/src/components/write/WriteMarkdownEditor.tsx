@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactElement } from 'react'
+import { useEffect, useRef, memo, type ReactElement } from 'react'
 import { Annotation, Compartment, EditorSelection, EditorState, type Extension } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
@@ -297,7 +297,7 @@ function expandWriteTemplateShortcut(view: EditorView): boolean {
   return true
 }
 
-export function WriteMarkdownEditor({
+function WriteMarkdownEditorComponent({
   value,
   workspaceRoot,
   filePath,
@@ -602,3 +602,5 @@ export function WriteMarkdownEditor({
 
   return <div ref={hostRef} className="write-codemirror-host flex h-full min-h-0 w-full min-w-0" />
 }
+
+export const WriteMarkdownEditor = memo(WriteMarkdownEditorComponent)
