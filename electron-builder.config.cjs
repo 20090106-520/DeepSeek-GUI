@@ -173,9 +173,7 @@ module.exports = {
     createStartMenuShortcut: true,
     shortcutName: 'DeepSeek GUI',
     uninstallDisplayName: 'DeepSeek GUI',
-    deleteAppDataOnUninstall: false,
-    installerLanguages: ['zh_CN', 'en_US'],
-    language: '2052'
+    deleteAppDataOnUninstall: false
   },
   linux: {
     category: 'Development',
