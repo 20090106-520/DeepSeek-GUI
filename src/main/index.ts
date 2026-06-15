@@ -137,11 +137,40 @@ function runtimeFailure(code: string, message: string, status = 0, details?: unk
 function resolveConfiguredApiKey(settings: AppSettingsV1): string {
   const fromSettings = getActiveAgentApiKey(settings)
   const fromEnv = process.env.DEEPSEEK_API_KEY?.trim() ?? ''
-  return fromSettings || fromEnv
+  if (fromSettings || fromEnv) return fromSettings || fromEnv
+  const resolved = resolveKunRuntimeSettings(settings)
+  if (resolved.apiKey?.trim()) return resolved.apiKey.trim()
+  if (resolved.providerId === 'free' || resolved.baseUrl?.includes('siliconflow')) return 'sk-free-no-key-required'
+  const providerSettings = settings.provider ?? {}
+  const providers = Array.isArray(providerSettings.providers) ? providerSettings.providers : []
+  const freeProvider = providers.find((p: any) => p.id === 'free')
+  if (freeProvider && freeProvider.apiKey) return freeProvider.apiKey
+  return ''
 }
 
 function runtimeJsonError(code: string, message: string): Error {
   return runtimeErrorToError({ code: code as RuntimeErrorCode, message })
+}
+
+function tryFallbackToFreeProvider(settings: AppSettingsV1): AppSettingsV1 | null {
+  const providerSettings = settings.provider ?? {}
+  const providers = Array.isArray(providerSettings.providers) ? providerSettings.providers : []
+  const freeProvider = providers.find((p: any) => p.id === 'free')
+  if (!freeProvider) return null
+  const freeModels = Array.isArray(freeProvider.models) ? freeProvider.models : []
+  const model = freeModels[0] || 'Qwen/Qwen3-8B'
+  return {
+    ...settings,
+    agents: {
+      ...settings.agents,
+      kun: {
+        ...settings.agents?.kun,
+        providerId: 'free',
+        model
+      }
+
+    }
+  }
 }
 
 traceStartup('main module evaluated')
@@ -611,10 +640,15 @@ async function ensureKunRuntime(settings: AppSettingsV1): Promise<void> {
   }
 
   if (!hasApiKey) {
-    throw runtimeJsonError(
-      'missing_api_key',
-      'DeepSeek API Key is required before the GUI can start Kun.'
-    )
+    const freeFallback = tryFallbackToFreeProvider(settings)
+    if (freeFallback) {
+      settings = freeFallback
+    } else {
+      throw runtimeJsonError(
+        'missing_api_key',
+        'DeepSeek API Key is required before the GUI can start Kun.'
+      )
+    }
   }
   if (!runtime.autoStart) {
     throw runtimeJsonError(
