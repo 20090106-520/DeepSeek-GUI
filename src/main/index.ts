@@ -193,6 +193,7 @@ if (!runningClawScheduleMcpServer && process.platform === 'win32') {
 
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
+let setRuntimeReadyCallback: () => void = () => {}
 let store: JsonSettingsStore
 let logDir = ''
 let clawRuntime: ClawRuntime | null = null
@@ -710,6 +711,14 @@ function createSplashWindow(): BrowserWindow {
   return splash
 }
 
+function updateSplashProgress(text: string): void {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.webContents.executeJavaScript(
+      `if(window.updateProgressText)window.updateProgressText(${JSON.stringify(text)})`
+    ).catch(() => {})
+  }
+}
+
 function closeSplashWindow(): void {
   if (splashWindow && !splashWindow.isDestroyed()) {
     splashWindow.close()
@@ -756,11 +765,25 @@ function createWindow(options: { suppressInitialShow?: boolean } = {}): void {
     console.error(`[deepseek-gui] failed to load preload ${preloadPath}:`, error)
     logError('preload', 'Failed to load preload script', { preloadPath, message })
   })
-  const showWindow = (): void => {
+  let mainWindowReady = false
+  let runtimeReady = false
+
+  const tryShowWindow = (): void => {
     if (options.suppressInitialShow) return
     if (!mainWindow || mainWindow.isDestroyed() || mainWindow.isVisible()) return
+    if (!mainWindowReady || !runtimeReady) return
     closeSplashWindow()
     mainWindow.show()
+  }
+
+  const showWindow = (): void => {
+    mainWindowReady = true
+    tryShowWindow()
+  }
+
+  setRuntimeReadyCallback = () => {
+    runtimeReady = true
+    tryShowWindow()
   }
   mainWindow.on('close', (event) => {
     if (isQuitting || !appBehavior.closeToTray) return
@@ -790,6 +813,7 @@ function createWindow(options: { suppressInitialShow?: boolean } = {}): void {
     showWindow()
   }, 1500)
 }
+
 
 /**
  * Stable equality for the Kun runtime settings. Most fields are flat,
@@ -1112,14 +1136,21 @@ app.whenReady().then(async () => {
     console.warn('[deepseek-gui] prune logs:', err)
   })
 
-  if (resolveConfiguredApiKey(initial) || tryFallbackToFreeProvider(initial)) {
+  const hasApiKey = resolveConfiguredApiKey(initial) || tryFallbackToFreeProvider(initial)
+  if (hasApiKey) {
     traceStartup('prewarm-kun:start')
+    updateSplashProgress('正在启动 AI 引擎...')
     void ensureRuntime(initial).then(() => {
       traceStartup('prewarm-kun:done')
+      updateSplashProgress('AI 引擎就绪')
+      setRuntimeReadyCallback()
     }).catch((err) => {
       console.warn('[deepseek-gui] prewarm Kun runtime:', err)
       traceStartup('prewarm-kun:failed')
+      setRuntimeReadyCallback()
     })
+  } else {
+    setRuntimeReadyCallback()
   }
 
   traceStartup('prewarm-novelforge:start')
