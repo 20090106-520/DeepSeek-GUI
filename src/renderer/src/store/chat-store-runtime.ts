@@ -80,7 +80,7 @@ export const MAX_PENDING_CLAW_FEISHU_MIRRORS = 50
 const completionNotificationKeys: string[] = []
 
 const DELTA_THROTTLE_MS = 16
-let deltaThrottleTimer: ReturnType<typeof setTimeout> | null = null
+let deltaThrottleTimer: ReturnType<typeof setTimeout> | number | null = null
 let pendingDeltas: Array<{ kind: string; text: string; seq?: number }> = []
 let pendingDeltaSet: ((s: ChatState) => Partial<ChatState>) | null = null
 const completionNotificationKeySet = new Set<string>()
@@ -623,10 +623,10 @@ export function buildThreadEventSink(
         pendingDeltas.push({ kind: delta.kind, text: delta.text, seq: delta.seq })
       }
       if (!deltaThrottleTimer) {
-        deltaThrottleTimer = setTimeout(() => {
-          deltaThrottleTimer = null
-          flushPendingDeltas(set, get, isCurrentStream)
-        }, DELTA_THROTTLE_MS)
+        const schedule = typeof requestAnimationFrame === 'function'
+          ? () => { deltaThrottleTimer = requestAnimationFrame(() => { deltaThrottleTimer = null; flushPendingDeltas(set, get, isCurrentStream) }) }
+          : () => { deltaThrottleTimer = setTimeout(() => { deltaThrottleTimer = null; flushPendingDeltas(set, get, isCurrentStream) }, DELTA_THROTTLE_MS) }
+        schedule()
       }
     },
     onTool: (ev) => {

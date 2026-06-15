@@ -113,10 +113,11 @@ export class SseEventBatcher {
     let i = 0
     while (i < events.length) {
       const event = events[i]
-      if (event.kind === 'assistant_text_delta' && i + 1 < events.length) {
+      const mergeableKinds = ['assistant_text_delta', 'assistant_reasoning_delta']
+      if (mergeableKinds.includes(event.kind) && i + 1 < events.length) {
         let combinedText = (event as { text?: string }).text ?? ''
         let j = i + 1
-        while (j < events.length && events[j].kind === 'assistant_text_delta') {
+        while (j < events.length && events[j].kind === event.kind) {
           combinedText += (events[j] as { text?: string }).text ?? ''
           j += 1
         }

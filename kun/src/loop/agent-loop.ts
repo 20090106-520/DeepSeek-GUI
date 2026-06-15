@@ -72,7 +72,7 @@ import { TODO_LIST_TOOL_NAME, TODO_WRITE_TOOL_NAME } from '../adapters/tool/todo
 import { shellRuntimeInstruction } from '../adapters/tool/builtin-tool-utils.js'
 
 const PARALLEL_READ_ONLY_TOOL_NAMES = new Set(['read', 'grep', 'find', 'ls'])
-const MAX_PARALLEL_TOOL_CALLS = 3
+const MAX_PARALLEL_TOOL_CALLS = 5
 const DEFAULT_COMPACTION_SUMMARY_TIMEOUT_MS = 15_000
 const DEFAULT_COMPACTION_SUMMARY_MAX_TOKENS = 1_200
 const DEFAULT_COMPACTION_SUMMARY_INPUT_MAX_BYTES = 96 * 1024
@@ -453,7 +453,7 @@ export class AgentLoop {
       this.opts.threadStore.get(threadId),
       this.opts.turns.getTurn(threadId, turnId)
     ])
-    await this.recordPipelineStage(threadId, turnId, 'input_received', { stepIndex })
+    this.recordPipelineStage(threadId, turnId, 'input_received', { stepIndex }).catch(() => {})
     const activePlanContext = turn?.guiPlan
       ? { ...turn.guiPlan, turnId }
       : this.opts.activePlanContext
@@ -466,12 +466,12 @@ export class AgentLoop {
     if (healed.changed) {
       await this.opts.sessionStore.rewriteItems(threadId, healed.items)
     }
-    await this.recordPipelineStage(
+    this.recordPipelineStage(
       threadId,
       turnId,
       'input_cached',
       prefixVolatilityStageDetails(detectVolatilePrefixContent(this.opts.prefix))
-    )
+    ).catch(() => {})
     if (stepIndex > 0) {
       const toolResultCount = healed.items.filter(
         (item) => item.turnId === turnId && item.kind === 'tool_result'
@@ -500,10 +500,10 @@ export class AgentLoop {
       reasoningEffort: turn?.reasoningEffort,
       candidates: [turn?.model, thread?.model, this.opts.model.model]
     })
-    await this.recordPipelineStage(threadId, turnId, 'input_routed', {
+    this.recordPipelineStage(threadId, turnId, 'input_routed', {
       model: modelRoute.model,
       ...(modelRoute.reasoningEffort ? { reasoningEffort: modelRoute.reasoningEffort } : {})
-    })
+    }).catch(() => {})
     const model = modelRoute.model
     const modelCapabilities = this.opts.modelCapabilities?.(model) ?? modelCapabilitiesForModel(model)
     const [attachments, skillResolution, memories] = await Promise.all([
@@ -610,9 +610,9 @@ export class AgentLoop {
     // plan or answer with plan text that the create_plan fallback materializes.
     const history = await this.compactIfNeeded(items, model, signal, { threadId, turnId })
     if (signal.aborted) return 'aborted'
-    await this.recordPipelineStage(threadId, turnId, 'input_compressed', {
+    this.recordPipelineStage(threadId, turnId, 'input_compressed', {
       historyItems: history.length
-    })
+    }).catch(() => {})
     const contextInstructions = [
       ...(activeGoalInstruction ? [activeGoalInstruction] : []),
       ...(activeTodoInstruction ? [activeTodoInstruction] : []),
@@ -621,10 +621,10 @@ export class AgentLoop {
       ...(toolSpecs.some((tool) => tool.name === 'bash') ? [shellRuntimeInstruction()] : []),
       ...(toolCatalogDriftMessage ? [toolCatalogDriftMessage] : [])
     ]
-    await this.recordPipelineStage(threadId, turnId, 'input_remembered', {
+    this.recordPipelineStage(threadId, turnId, 'input_remembered', {
       memoryCount: memories.length,
       contextInstructionCount: contextInstructions.length
-    })
+    }).catch(() => {})
     const tokenEconomy = normalizeTokenEconomyConfig(this.opts.tokenEconomy)
     const baseRequest: ModelRequest = {
       threadId,
@@ -665,7 +665,7 @@ export class AgentLoop {
     let reasoningItemId = ''
     const completedToolCalls: ToolCallLike[] = []
     let stopReason: 'stop' | 'tool_calls' | 'length' | 'error' = 'stop'
-    await this.recordPipelineStage(threadId, turnId, 'pre_send', {
+    this.recordPipelineStage(threadId, turnId, 'pre_send', {
       model: request.model,
       historyItems: request.history.length,
       toolCount: request.tools.length,
@@ -676,10 +676,10 @@ export class AgentLoop {
         textFallbacks: attachments.textFallbacks,
         modelCapabilities
       })
-    })
-    await this.recordPipelineStage(threadId, turnId, 'post_send', {
+    }).catch(() => {})
+    this.recordPipelineStage(threadId, turnId, 'post_send', {
       model: request.model
-    })
+    }).catch(() => {})
     for await (const chunk of this.opts.model.stream(request)) {
       if (signal.aborted) return 'aborted'
       switch (chunk.kind) {
@@ -790,10 +790,10 @@ export class AgentLoop {
           break
       }
     }
-    await this.recordPipelineStage(threadId, turnId, 'response_received', {
+    this.recordPipelineStage(threadId, turnId, 'response_received', {
       stopReason,
       toolCallCount: completedToolCalls.length
-    })
+    }).catch(() => {})
     if (reasoningAccumulator.value) {
       const itemId = reasoningItemId || this.opts.ids.next('item_reasoning')
       await this.opts.turns.applyItem(
